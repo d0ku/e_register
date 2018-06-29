@@ -12,3 +12,8 @@ CREATE TABLE PrzepisyOdBabci (
     username text REFERENCES Users(username),
     salt CHAR(7) NOT NULL
 );
+
+CREATE TABLE SessionID (
+    session_id text NOT NULL UNIQUE,
+    username text NOT NULL REFERENCES Users(username)
+);

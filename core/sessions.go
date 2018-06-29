@@ -1,140 +1,140 @@
 package core
 
-/*
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"html/template"
 	"io"
-	"net/http"
-	"net/url"
-	"sync"
-	"time"
+	"log"
 )
 
-var globalSessions *session.Manager
+//TODO: that part is deprecated at the moment.
 
-type Manager struct {
-	cookieName  string     //private cookiename
-	lock        sync.Mutex // protects session
-	provider    Provider
-	maxlifetime int64
+//User defines one logged user from session.
+type User struct {
+	username   string
+	privileges string
 }
 
-func NewManager(provideName, cookieName string, maxlifetime int64) (*Manager, error) {
-	provider, ok := provides[provideName]
-	if !ok {
-		return nil, fmt.Errorf("session: unknown provide %q (forgotten import?)", provideName)
+//SessionManager describes basic SessionManager for netApp.
+type SessionManager struct {
+	sessionsToUsers map[string]string
+	usersToSessions map[string]string
+	sessionIDLength int
+	//If no dbConnection is provided, there won't be any operations done in SQL.
+	dbConnection *sql.DB
+}
+
+//GetSessionManager returns Session Manager with properly set up attributes.
+func GetSessionManager(sessionIDLength int, dbConnection *sql.DB) *SessionManager {
+	manager := &SessionManager{sessionsToUsers: make(map[string]string), usersToSessions: make(map[string]string), sessionIDLength: 32, dbConnection: dbConnection}
+
+	return manager
+}
+
+//FindSessionID returns matching sessionID basing on provided username or error if sessionID can't be found.
+func (manager *SessionManager) FindSessionID(username string) (string, error) {
+	value, ok := manager.usersToSessions[username]
+
+	if ok {
+		return value, nil
 	}
-	return &Manager{provider: provider, cookieName: cookieName, maxlifetime: maxlifetime}, nil
+
+	return "", errors.New("No sessionID for such username")
 }
 
-type Provider interface {
-	SessionInit(sid string) (Session, error)
-	SessionRead(sid string) (Session, error)
-	SessionDestroy(sid string) error
-	SessionGC(maxLifeTime int64)
-}
+//FindUserName returns matching username basing on provided sessionID or error if username can't be found.
+func (manager *SessionManager) FindUserName(sessionID string) (string, error) {
+	value, ok := manager.sessionsToUsers[sessionID]
 
-type Session interface {
-	Set(key, value interface{}) error //set session value
-	Get(key interface{}) interface{}  //get session value
-	Delete(key interface{}) error     //delete session value
-	SessionID() string                //back current sessionID
-}
-
-var provides = make(map[string]Provider)
-
-// Register makes a session provider available by the provided name.
-// If a Register is called twice with the same name or if the driver is nil,
-// it panics.
-func Register(name string, provider Provider) {
-	if provider == nil {
-		panic("session: Register provider is nil")
+	if ok {
+		return value, nil
 	}
-	if _, dup := provides[name]; dup {
-		panic("session: Register called twice for provider " + name)
-	}
-	provides[name] = provider
+
+	return "", errors.New("No user for such sessionID")
 }
 
-func (manager *Manager) sessionId() string {
-	b := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, b); err != nil {
-		return ""
+//GetSessionID returns already existing sessionID for username, or creates new and returns if needed.
+func (manager *SessionManager) GetSessionID(username string) string {
+
+	generateSessionID := func(length int) string {
+		bytes := make([]byte, length)
+
+		_, err := io.ReadFull(rand.Reader, bytes)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return base64.URLEncoding.EncodeToString(bytes)
 	}
-	return base64.URLEncoding.EncodeToString(b)
+
+	sessionID, err := manager.FindSessionID(username)
+
+	if err == nil {
+		return sessionID
+	}
+
+	sessionID = generateSessionID(manager.sessionIDLength) //TODO: make unique id
+	manager.createSession(sessionID, username)
+	return sessionID
+
 }
 
-func (manager *Manager) SessionStart(w http.ResponseWriter, r *http.Request) (session Session) {
-	manager.lock.Lock()
-	defer manager.lock.Unlock()
-	cookie, err := r.Cookie(manager.cookieName)
-	if err != nil || cookie.Value == "" {
-		sid := manager.sessionId()
-		session, _ = manager.provider.SessionInit(sid)
-		cookie := http.Cookie{Name: manager.cookieName, Value: url.QueryEscape(sid), Path: "/", HttpOnly: true, MaxAge: int(manager.maxlifetime)}
-		http.SetCookie(w, &cookie)
-	} else {
-		sid, _ := url.QueryUnescape(cookie.Value)
-		session, _ = manager.provider.SessionRead(sid)
-	}
-	return
-}
+func (manager *SessionManager) createSession(sessionID string, username string) {
+	manager.usersToSessions[username] = sessionID
+	manager.sessionsToUsers[sessionID] = username
 
-func login(w http.ResponseWriter, r *http.Request) {
-	sess := globalSessions.SessionStart(w, r)
-	r.ParseForm()
-	if r.Method == "GET" {
-		t, _ := template.ParseFiles("login.gtpl")
-		w.Header().Set("Content-Type", "text/html")
-		t.Execute(w, sess.Get("username"))
-	} else {
-		sess.Set("username", r.Form["username"])
-		http.Redirect(w, r, "/", 302)
-	}
-}
-
-func count(w http.ResponseWriter, r *http.Request) {
-	sess := globalSessions.SessionStart(w, r)
-	createtime := sess.Get("createtime")
-	if createtime == nil {
-		sess.Set("createtime", time.Now().Unix())
-	} else if (createtime.(int64) + 360) < (time.Now().Unix()) {
-		globalSessions.SessionDestroy(w, r)
-		sess = globalSessions.SessionStart(w, r)
-	}
-	ct := sess.Get("countnum")
-	if ct == nil {
-		sess.Set("countnum", 1)
-	} else {
-		sess.Set("countnum", (ct.(int) + 1))
-	}
-	t, _ := template.ParseFiles("count.gtpl")
-	w.Header().Set("Content-Type", "text/html")
-	t.Execute(w, sess.Get("countnum"))
-}
-
-// Destroy sessionid
-func (manager *Manager) SessionDestroy(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie(manager.cookieName)
-	if err != nil || cookie.Value == "" {
-		return
-	} else {
-		manager.lock.Lock()
-		defer manager.lock.Unlock()
-		manager.provider.SessionDestroy(cookie.Value)
-		expiration := time.Now()
-		cookie := http.Cookie{Name: manager.cookieName, Path: "/", HttpOnly: true, Expires: expiration, MaxAge: -1}
-		http.SetCookie(w, &cookie)
+	if manager.dbConnection != nil {
+		query := "INSERT INTO SessionID(\"sessionid\", \"username\") VALUES('" + sessionID + "','" + username + "');"
+		fmt.Println(query)
+		res, err := dbConnection.Exec(query)
+		if err != nil {
+			log.Print(err)
+		}
+		log.Print(res)
 	}
 }
 
-func (manager *Manager) GC() {
-	manager.lock.Lock()
-	defer manager.lock.Unlock()
-	manager.provider.SessionGC(manager.maxlifetime)
-	time.AfterFunc(time.Duration(manager.maxlifetime), func() { manager.GC() })
+//RemoveSession removes session based on the provided sessionID.
+func (manager *SessionManager) RemoveSession(sessionID string) {
+	delete(manager.sessionsToUsers, manager.sessionsToUsers[manager.usersToSessions[sessionID]])
+	delete(manager.usersToSessions, manager.usersToSessions[sessionID])
+	if manager.dbConnection != nil {
+		query := "DELETE FROM Sessionid WHERE \"sessionid\"='" + sessionID + "';"
+		fmt.Println(query)
+		res, err := dbConnection.Exec(query)
+		if err != nil {
+			log.Print(err)
+		}
+		log.Print(res)
+	}
 }
-*/
+
+//ReadSessionsFromDatabase tries to find session_id->username pairs in provided database in table SessionID.
+func (manager *SessionManager) ReadSessionsFromDatabase() error {
+	if manager.dbConnection == nil {
+		return errors.New("No database handler provided")
+	}
+
+	manager.sessionsToUsers = make(map[string]string)
+	rows, err := dbConnection.Query("SELECT * FROM SessionID;")
+	if err != nil {
+		panic(err)
+	}
+
+	defer rows.Close()
+	var sessionID string
+	var username string
+	fmt.Println("Restoring sessions:")
+	for rows.Next() {
+		rows.Scan(&sessionID, &username)
+		manager.sessionsToUsers[sessionID] = username
+		manager.usersToSessions[username] = sessionID
+		fmt.Println("---> " + username)
+	}
+	fmt.Println("Sessions restored.")
+	return nil
+}

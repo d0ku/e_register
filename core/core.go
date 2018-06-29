@@ -1,5 +1,6 @@
 package core
 
+//TODO: sessions are now stored in database, they should be removed after certain amount of time.
 import (
 	"database/sql"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"time"
 
 	//That's recommended way to import sql driver.
 	_ "github.com/lib/pq"
@@ -15,6 +17,7 @@ import (
 
 var dbConnection *sql.DB
 
+var sessionManager *SessionManager
 var templates map[string]*template.Template
 
 func parseAllTemplates() {
@@ -26,19 +29,21 @@ func parseAllTemplates() {
 		panic(err)
 	}
 
+	fmt.Println("Parsing templates: ")
 	for _, templateFile := range templateFiles {
 		if !templateFile.IsDir() {
 			name := templateFile.Name()
 
 			//BUG: this regex matches too much at the moment
-			regex := regexp.MustCompile(".*\\.gtpl")
+			regex := regexp.MustCompile("^.*\\.gtpl$")
 			//Parse only gtpl files at the moment (html templates).
 			if regex.MatchString(name) {
-				fmt.Println(pageFolder + name)
+				fmt.Println("---> " + pageFolder + name)
 				templates[name] = template.Must(template.ParseFiles(pageFolder + name))
 			}
 		}
 	}
+	fmt.Println("Finished parsing.")
 }
 
 func mainHandler(response http.ResponseWriter, request *http.Request) {
@@ -62,14 +67,59 @@ func mainHandler(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
+func logoutHandler(response http.ResponseWriter, request *http.Request) {
+	cookie, err := request.Cookie("sessionID")
+	if err != nil {
+		log.Print("Try to log out not yet logged in user.")
+		//TODO: display something that user is not even logged in, or just ignore it and redirect to main.
+		return
+	}
+
+	//Delete cookie and redirect to main.
+	cookie.Expires = time.Unix(0, 0)
+	http.SetCookie(response, cookie)
+	sessionManager.RemoveSession(cookie.Value)
+
+	http.Redirect(response, request, "/main", http.StatusSeeOther)
+}
+
 func loginHandler(response http.ResponseWriter, request *http.Request) {
 
 	fmt.Println(request.Method)
 	if request.Method == "GET" {
-		err := templates["login.gtpl"].Execute(response, nil)
+		//if logged in display personalized site, else display login site
+
+		cookie, err := request.Cookie("sessionID")
 		if err != nil {
-			log.Fatal(err)
+			//not logged in, cookie does not exist
+			err := templates["login.gtpl"].Execute(response, nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
 		}
+
+		username, err := sessionManager.FindUserName(cookie.Value)
+
+		if err != nil {
+			log.Print("Client side thinks it is logged in, but it is not.")
+
+			//TODO: display something about that he has to relogin (probably redirect should be enough).
+			cookie.Expires = time.Unix(0, 0)
+			http.SetCookie(response, cookie)
+			http.Redirect(response, request, "/login", http.StatusSeeOther)
+			//user thinks he is logged in, but it is not true.
+			return
+
+		}
+
+		err = templates["login_personal.gtpl"].Execute(response, username)
+		if err != nil {
+			log.Print(err)
+		}
+		return
+
+		//logged in
 
 	} else {
 		request.ParseForm()
@@ -94,12 +144,32 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 			log.Fatal(err)
 			return
 		default:
-			//If login was successful, set 'Logged' cookie with sessionId as value.
-			fmt.Println("Successful log in: " + usernameBase.String)
-			value := "12345"
-			cookie := &http.Cookie{Name: "Logged", Value: value, MaxAge: 0, Secure: true, HttpOnly: false}
+			//good password and username combination
+
+			//If we have stored sessionID for that user just send it back to him,
+			//else create new one.
+
+			sessionID := sessionManager.GetSessionID(username)
+			cookie := &http.Cookie{Name: "sessionID", Value: sessionID, MaxAge: 0, Secure: true, HttpOnly: false}
+			log.Print("Successfull authentication: " + username)
+
+			/*
+				if err != nil {
+					//Data was found.
+					cookie.Value = sessionID
+					log.Print("Successful relogin: " + usernameBase.String)
+				} else {
+					sessionID := GenerateSessionID(32)
+					AddSession(sessionID, username)
+					cookie.Value = sessionID
+					log.Print("Successful log in: " + usernameBase.String)
+				}
+			*/
+
+			//Send cookie with sessionID to Client.
 			http.SetCookie(response, cookie)
-			response.Write([]byte("ok"))
+
+			http.Redirect(response, request, "/login", http.StatusSeeOther)
 		}
 
 		//If user and password don't match in database return error,
@@ -123,6 +193,9 @@ func Run() {
 	connStr := "user=d0ku dbname=database_project_go sslmode=disable"
 	dbConnection, err = sql.Open("postgres", connStr)
 
+	sessionManager = GetSessionManager(32, dbConnection)
+	sessionManager.ReadSessionsFromDatabase()
+
 	//Could not initialize connection.
 	if err != nil {
 		panic(err)
@@ -132,9 +205,11 @@ func Run() {
 
 	var port = "1234"
 
+	fmt.Println()
 	fmt.Println("Listen to me at: https://localhost:" + port)
 
 	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/delete", deleteHandler)
 	http.HandleFunc("/main", mainHandler)
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
