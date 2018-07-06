@@ -3,6 +3,7 @@ package core
 //TODO: sessions are now stored in database, they should be removed after certain amount of time.
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -19,6 +20,32 @@ var dbConnection *sql.DB
 
 var sessionManager *SessionManager
 var templates map[string]*template.Template
+
+//UserData represents data used to fill in GO HTML templates.
+type UserData struct {
+	UserName string
+	IsLogged bool
+}
+
+func getUserDataFromRequest(response http.ResponseWriter, request *http.Request) (*UserData, error) {
+	user := &UserData{}
+	cookie, err := request.Cookie("sessionID")
+	if err != nil {
+		return user, errors.New("No cookie set")
+	}
+
+	username, err := sessionManager.FindUserName(cookie.Value)
+	if err != nil {
+		//Delete cookie which is notrecognized on server side.
+		return user, errors.New("That session does not exist")
+		cookie.Expires = time.Unix(0, 0)
+		http.SetCookie(response, cookie)
+	}
+	user.UserName = username
+	user.IsLogged = true
+
+	return user, nil
+}
 
 func parseAllTemplates() {
 	pageFolder := "./page/"
@@ -47,19 +74,26 @@ func parseAllTemplates() {
 }
 
 func mainHandler(response http.ResponseWriter, request *http.Request) {
-	//That implementation is not stable and dangerous, but fun so I will keep it for now.
-
-	//If address is "/" point to index, else try to find adequate file in page folder.
-
-	fmt.Println(request.Method)
 	if request.Method == "GET" {
-		//		t, _ := template.ParseFiles("page/index.gtpl")
-		err := templates["index.gtpl"].Execute(response, nil)
+
+		user, err := getUserDataFromRequest(response, request)
+		//In theory we don't have to check whether username exists, as parsing template without arguments could just render unlogged site?
+
+		/*
+			if err != nil {
+				err := templates["index.gtpl"].Execute(response, nil)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				return
+			}
+		*/
+
+		err = templates["index.gtpl"].Execute(response, user)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		//Set correct Content-Type in response basing on request.
 
 	} else {
 		//POST
@@ -107,7 +141,7 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 			//TODO: display something about that he has to relogin (probably redirect should be enough).
 			cookie.Expires = time.Unix(0, 0)
 			http.SetCookie(response, cookie)
-			http.Redirect(response, request, "/login", http.StatusSeeOther)
+			http.Redirect(response, request, "/main", http.StatusSeeOther)
 			//user thinks he is logged in, but it is not true.
 			return
 
@@ -169,16 +203,21 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 			//Send cookie with sessionID to Client.
 			http.SetCookie(response, cookie)
 
-			http.Redirect(response, request, "/login", http.StatusSeeOther)
+			http.Redirect(response, request, "/main", http.StatusSeeOther)
 		}
-
-		//If user and password don't match in database return error,
-		//else create session and proceed
 	}
 }
 
 func deleteHandler(response http.ResponseWriter, request *http.Request) {
 	response.Write([]byte(request.URL.String()))
+}
+
+func registerHandler(response http.ResponseWriter, request *http.Request) {
+	user, _ := getUserDataFromRequest(response, request)
+
+	//TODO: write register.gtpl, if user has adequate privileges, (add variable to User Structure) display adding users panel,
+	// else display you don't have privileges.
+	templates["register.gtpl"].Execute(response, user)
 }
 
 //Run starts the server at default port and prints info in console how to connect to it.
@@ -193,9 +232,6 @@ func Run() {
 	connStr := "user=d0ku dbname=database_project_go sslmode=disable"
 	dbConnection, err = sql.Open("postgres", connStr)
 
-	sessionManager = GetSessionManager(32, dbConnection)
-	sessionManager.ReadSessionsFromDatabase()
-
 	//Could not initialize connection.
 	if err != nil {
 		panic(err)
@@ -203,16 +239,22 @@ func Run() {
 
 	defer dbConnection.Close()
 
+	sessionManager = GetSessionManager(32, dbConnection)
+	sessionManager.ReadSessionsFromDatabase()
+
 	var port = "1234"
 
 	fmt.Println()
 	fmt.Println("Listen to me at: https://localhost:" + port)
 
+	//TODO: some kind of login panel, where admin can add new users?
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/delete", deleteHandler)
 	http.HandleFunc("/main", mainHandler)
+	http.HandleFunc("/register", registerHandler)
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
+	//Certificates are self signed, so they are not worth a penny, if this is supposed to go into production, certificates should be obtained from approppriate organisation.
 	err = http.ListenAndServeTLS(":"+port, "server.crt", "server.key", nil)
 
 	//Something went wrong with starting HTTPS server.
