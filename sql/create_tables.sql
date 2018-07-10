@@ -9,7 +9,6 @@ CREATE TYPE presence_type AS ENUM('present', 'absent', 'late', 'justified');
 CREATE TYPE grade_type AS ENUM('1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '5.5', '6.0');
 CREATE TYPE semester_type AS ENUM('winter', 'summer');
 CREATE TYPE behaviour_grades_type AS ENUM('1.0', '2.0', '3,0', '4.0', '5.0');
-
 CREATE TABLE Users (
     username text UNIQUE NOT NULL,
     hashed_password text NOT NULL,
@@ -19,7 +18,7 @@ CREATE TABLE Users (
 
 CREATE TABLE SessionID (
     session_id text NOT NULL UNIQUE,
-    username text NOT NULL REFERENCES Users(username)
+    username text NOT NULL references Users(username)
 );
 
 CREATE TABLE Semesters (
@@ -40,20 +39,20 @@ CREATE TABLE Addresses (
 CREATE TABLE Schools (
     id_school SERIAL PRIMARY KEY,
     full_name text NOT NULL,
-    id_address REFERENCES Addresses(id_address),
+    id_address integer references Addresses(id_address),
     typ school_type NOT NULL,
     bought_offer offer_type NOT NULL
 );
 
 CREATE TABLE SchoolsNumbers (
-    id_school REFERENCES Schools(id_school),
+    id_school SERIAL references Schools(id_school),
     phone_number text NOT NULL
 );
 
 CREATE TABLE Teachers (
     id_teacher SERIAL PRIMARY KEY,
-    id_school REFERENCES Schools(id_school),
-    id_address REFERENCES Addresses(id_address),
+    id_school integer references Schools(id_school),
+    id_address integer references Addresses(id_address),
     forename text NOT NULL,
     surename text NOT NULL,
     teacher_rank teacher_rank NOT NULL,
@@ -62,7 +61,7 @@ CREATE TABLE Teachers (
 );
 
 CREATE TABLE TeachersNumbers (
-    id_teacher REFERENCES Teachers(id_teacher),
+    id_teacher integer references Teachers(id_teacher),
     phone_number text NOT NULL
 );
 
@@ -72,21 +71,21 @@ CREATE TABLE Subjects (
 );
 
 CREATE TABLE TeachersSubjects (
-    id_teacher REFERENCES Teachers(id_teacher),
-    id_subject REFERENCES Subjects(id_subject),
+    id_teacher integer references Teachers(id_teacher),
+    id_subject integer references Subjects(id_subject),
     PRIMARY KEY(id_teacher, id_subject)
 );
 
 CREATE TABLE SchoolsAdministrators (
-    id_teacher REFERENCES Teachers(id_teacher),
-    id_school REFERENCES Schools(id_school),
+    id_teacher integer references Teachers(id_teacher),
+    id_school integer references Schools(id_school),
     PRIMARY KEY(id_teacher, id_school)
 );
 
 CREATE TABLE Classes (
     id_class SERIAL PRIMARY KEY,
-    id_school REFERENCES Schools(id_school),
-    id_educator REFERENCES Teachers(id_teacher),
+    id_school integer references Schools(id_school),
+    id_educator integer references Teachers(id_teacher),
     start_date date NOT NULL,
     end_date date NOT NULL CHECK(end_date > start_date),
     letter VARCHAR(3) NOT NULL, -- TI, a, b
@@ -96,122 +95,121 @@ CREATE TABLE Classes (
 CREATE TABLE Lessons (
     --TODO: consider creating additional table with lesson times, and just referencing by id here?
     id_lesson SERIAL PRIMARY KEY,
-    id_subject REFERENCES Subjects(id_subject),
+    id_subject integer references Subjects(id_subject),
     start_hour time NOT NULL,
     end_hour time NOT NULL,
     day day_type NOT NULL
 );
 
 CREATE TABLE ClassesLessons (
-    id_class REFERENCES Classes(id_class),
-    id_subject REFERENCES Subjects(id_subject),
+    id_class integer references Classes(id_class),
+    id_subject integer references Subjects(id_subject),
     PRIMARY KEY(id_class, id_subject)
 );
 
 CREATE TABLE LessonsTeachers (
-    id_lesson REFERENCES Lessons(id_lesson),
-    id_teacher REFERENCES Teachers(id_teacher),
+    id_lesson integer references Lessons(id_lesson),
+    id_teacher integer references Teachers(id_teacher),
     PRIMARY KEY(id_lesson, id_teacher)
 );
 
 CREATE TABLE Students (
     id_student SERIAL PRIMARY KEY,
-    id_school REFERENCES Schools(id_school),
-    id_class REFERENCES Classes(id_class),
-    id_address REFERENCES Addresses(id_address),
-    surename NOT NULL,
-    forename NOT NULL,
+    id_school integer references Schools(id_school),
+    id_class integer references Classes(id_class),
+    id_address integer references Addresses(id_address),
+    surename text NOT NULL,
+    forename text NOT NULL,
     sex sex_type NOT NULL,
     date_of_birth date NOT NULL
 );
 
 CREATE TABLE StudentsNumbers (
-    id_student REFERENCES Students(id_student),
+    id_student integer references Students(id_student),
     phone_number text NOT NULL
 );
 
 CREATE TABLE StudentsInformation (
-    id_student REFERENCES Students(id_student),
+    id_student integer references Students(id_student),
     information text NOT NULL,
     PRIMARY KEY(id_student, information)
 );
 
 CREATE TABLE LessonsPresence (
-    id_lesson REFERENCES Lessons(id_lesson),
-    id_student REFERENCES Students(id_student),
+    id_lesson integer references Lessons(id_lesson),
+    id_student integer references Students(id_student),
     status presence_type NOT NULL,
-    id_insertor REFERENCES Teachers(id_teacher)
+    id_insertor integer references Teachers(id_teacher)
 );
 
 CREATE TABLE Warnings (
     -- No reference to lesson, because warnings can be added by teachers who don't have lessons with student.
     id_warning SERIAL PRIMARY KEY,
-    id_student REFERENCES Students(id_student),
-    id_teacher REFERENCES Teachers(id_teacher),
+    id_student integer references Students(id_student),
+    id_teacher integer references Teachers(id_teacher),
     content text NOT NULL,
     day date
 );
 
 CREATE TABLE Grades (
     id_grade SERIAL PRIMARY KEY,
-    id_student REFERENCES Students(id_student),
-    id_teacher REFERENCES Teachers(id_teacher),
-    id_subject REFERENCES Subjects(id_subject),
+    id_student integer references Students(id_student),
+    id_teacher integer references Teachers(id_teacher),
+    id_subject integer references Subjects(id_subject),
     grade grade_type NOT NULL
 );
 --Represents current semester.
 CREATE TABLE FinalGrades (
     id_grade SERIAL PRIMARY KEY,
-    id_student REFERENCES Students(id_student),
-    id_teacher REFERENCES Teachers(id_teacher), --who added this grade.
-    id_subject REFERENCES Subjects(id_subject),
+    id_student integer references Students(id_student),
+    id_teacher integer references Teachers(id_teacher), --who added this grade.
+    id_subject integer references Subjects(id_subject),
     grade grade_type NOT NULL
 );
 
 --Stores information about all previous semesters.
 CREATE TABLE FinalGradesArchive (
 id_grade SERIAL PRIMARY KEY,
-    id_student REFERENCES Students(id_student),
-    id_teacher REFERENCES Teachers(id_teacher), --who added this grade.
-    id_subject REFERENCES Subjects(id_subject),
-    id_class REFERENCES Classes(id_class),
-    id_semester REFERENCES Semesters(id_semester),
+    id_student integer references Students(id_student),
+    id_teacher integer references Teachers(id_teacher), --who added this grade.
+    id_subject integer references Subjects(id_subject),
+    id_class integer references Classes(id_class),
+    id_semester integer references Semesters(id_semester),
     grade grade_type NOT NULL
 );
 
 CREATE TABLE StudentsBehaviourGradesFinal (
     id_grade SERIAL PRIMARY KEY,
-    id_student REFERENCES Students(id_student),
-    id_teacher REFERENCES Teachers(id_teacher),
+    id_student integer references Students(id_student),
+    id_teacher integer references Teachers(id_teacher),
     value behaviour_grades_type NOT NULL
 );
 
 CREATE TABLE StudentsBehaviourGradesFinalArchive (
     id_grade SERIAL PRIMARY KEY,
-    id_student REFERENCES Students(id_student),
-    id_teacher REFERENCES Teachers(id_teacher),
-    id_class REFERENCES Classes(id_class),
-    id_semester REFERENCES Semesters(id_semester),
+    id_student integer references Students(id_student),
+    id_teacher integer references Teachers(id_teacher),
+    id_class integer references Classes(id_class),
+    id_semester integer references Semesters(id_semester),
     value behaviour_grades_type NOT NULL
 );
 
 CREATE TABLE Parents (
     id_parent SERIAL PRIMARY KEY,
-    id_address REFERENCES Addresses(id_address),
+    id_address integer references Addresses(id_address),
     forename text NOT NULL,
     surename text NOT NULL,
     sex sex_type NOT NULL
 );
 
 CREATE TABLE ParentsNumbers (
-    id_parent REFERENCES Parents(id_parent),
+    id_parent integer references Parents(id_parent),
     phone_number text NOT NULL
 );
 
 CREATE TABLE ParentsStudents (
-    id_parent REFERENCES Parents(id_parent),
-    id_student REFERENCES Students(id_student),
+    id_parent integer references Parents(id_parent),
+    id_student integer references Students(id_student),
     PRIMARY KEY(id_parent, id_student)
 );
-
 -- 28
