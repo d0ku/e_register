@@ -24,7 +24,8 @@ CREATE TABLE SessionID (
 CREATE TABLE Semesters (
     id_semester SERIAL PRIMARY KEY,
     semester semester_type NOT NULL,
-    year integer NOT NULL
+    year integer NOT NULL,
+    UNIQUE(semester, year)
 );
 
 CREATE TABLE Addresses (
@@ -46,7 +47,8 @@ CREATE TABLE Schools (
 
 CREATE TABLE SchoolsNumbers (
     id_school SERIAL references Schools(id_school),
-    phone_number text NOT NULL
+    phone_number text NOT NULL,
+    PRIMARY KEY(id_school, phone_number)
 );
 
 CREATE TABLE Teachers (
@@ -62,7 +64,8 @@ CREATE TABLE Teachers (
 
 CREATE TABLE TeachersNumbers (
     id_teacher integer references Teachers(id_teacher),
-    phone_number text NOT NULL
+    phone_number text NOT NULL,
+    PRIMARY KEY(id_teacher, phone_number)
 );
 
 CREATE TABLE Subjects (

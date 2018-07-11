@@ -3,6 +3,7 @@ DECLARE
 temp integer;
 BEGIN
     --Lock should prevent race condition (both connections check that user does not exist, then one can add and second can't add.).
+    -- Possible BUG. Rethink is needed.
     LOCK Users IN EXCLUSIVE MODE;
     IF EXISTS(  SELECT Users.username
         FROM Users
@@ -38,5 +39,14 @@ BEGIN
     END IF;
 
     RETURN return_data;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_semester(IN sem_type semester_type, year integer) RETURNS integer AS $$
+DECLARE
+    to_return integer;
+BEGIN
+    INSERT INTO Semesters("semester", "year") VALUES(sem_type, year) RETURNING id_semester INTO to_return;
+    RETURN to_return;
 END
 $$ language plpgsql;
