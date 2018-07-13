@@ -145,17 +145,25 @@ BEGIN
 END
 $$ language plpgsql;
 
-CREATE OR REPLACE FUNCTION add_teacher(IN school_id integer, address_id integer, forename text, surename text, degree teacher_rank, sex_in sex_type, born_date DATE) RETURNS INTEGER AS $$
+CREATE OR REPLACE FUNCTION add_teacher(IN address_id integer, forename text, surename text, degree teacher_rank, sex_in sex_type, born_date DATE) RETURNS INTEGER AS $$
 --Return id if succesfully added, -1 otherwise.
 DECLARE
     to_return integer;
 BEGIN
-    --try to add school admin.
-    INSERT INTO Teachers("id_school", "id_address", "forename", "surename", "teacher_rank", "sex", "date_of_birth") VALUES(school_id, address_id, forename, surename, degree, sex_in, born_date) RETURNING id_teacher INTO to_return;
+    INSERT INTO Teachers("id_address", "forename", "surename", "teacher_rank", "sex", "date_of_birth") VALUES(address_id, forename, surename, degree, sex_in, born_date) RETURNING id_teacher INTO to_return;
     RETURN to_return;
     --if there is an error, return -1.
     EXCEPTION WHEN integrity_constraint_violation THEN
         RETURN -1;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_teacher_to_school(IN teacher_id integer, school_id integer) RETURNS BOOLEAN AS $$
+BEGIN
+    INSERT INTO TeachersSchools("id_teacher","id_school") VALUES(teacher_id, school_id);
+    RETURN TRUE;
+    EXCEPTION WHEN integrity_constraint_violation THEN
+        RETURN FALSE;
 END
 $$ language plpgsql;
 
@@ -178,3 +186,27 @@ BEGIN
         RETURN -1;
 END
 $$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_lesson(IN id_subject_in integer, id_school_in integer, start_hour time, end_hour time, day_name day_type) RETURNS INTEGER AS $$
+--If successfully added return lesson_id, else return -1.
+DECLARE
+    to_return integer;
+BEGIN
+    INSERT INTO Lessons("id_subject", "id_school","start_hour","end_hour", "day") VALUES(id_subject_in, id_school_in, start_hour, end_hour, day_name) RETURNING id_lesson INTO to_return;
+        RETURN to_return;
+    EXCEPTION WHEN integrity_constraint_violation THEN
+        RETURN -1;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_teacher_to_lesson(IN lesson_id integer, teacher_id integer) RETURNS BOOLEAN AS $$
+BEGIN
+    --TODO: write trigger for inserting into that table, that does not allow one teacher to have two lessons at same time. It is possible that exception catch should be changed then. Teachers should be allowed to have lessons at different schools, part-time job etc.
+    INSERT INTO LessonsTeachers("id_lesson", "id_teacher") VALUES(lesson_id, teacher_id);
+    RETURN TRUE;
+    EXCEPTION WHEN integrity_constraint_violation THEN
+        RETURN FALSE;
+END
+$$ language plpgsql;
+
+

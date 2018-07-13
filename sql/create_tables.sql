@@ -55,14 +55,19 @@ CREATE TABLE SchoolsNumbers (
 
 CREATE TABLE Teachers (
     id_teacher SERIAL PRIMARY KEY,
-    id_school integer references Schools(id_school),
     id_address integer references Addresses(id_address),
     forename text NOT NULL,
     surename text NOT NULL,
     teacher_rank teacher_rank NOT NULL,
     sex sex_type NOT NULL,
     date_of_birth date,
-    UNIQUE(id_school,id_address,forename,surename,teacher_rank,sex,date_of_birth)
+    UNIQUE(id_address,forename,surename,teacher_rank,sex,date_of_birth)
+);
+
+CREATE TABLE TeachersSchools (
+    id_teacher integer references Teachers(id_teacher),
+    id_school integer references Schools(id_school),
+    PRIMARY KEY(id_teacher, id_school)
 );
 
 CREATE TABLE TeachersNumbers (
@@ -100,11 +105,13 @@ CREATE TABLE Classes (
 );
 
 CREATE TABLE Lessons (
-    --TODO: consider creating additional table with lesson times, and just referencing by id here?
+    --TODO: consider creating additional table with lesson times, and just referencing by id here? (probably would not work well, if there are many schools with different hours.)
+    --can't use UNIQUE here, many lessons can be run at same time with same subject in many schools.
     id_lesson SERIAL PRIMARY KEY,
+    id_school integer references Schools(id_school),
     id_subject integer references Subjects(id_subject),
     start_hour time NOT NULL,
-    end_hour time NOT NULL,
+    end_hour time NOT NULL CHECK(end_hour > start_hour),
     day day_type NOT NULL
 );
 
