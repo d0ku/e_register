@@ -1,9 +1,13 @@
 SELECT add_user('testUser','testPassword','teacher',1); --should return true (correct)
 SELECT add_user('testUser','testPassword','teacher',1); --should return false (duplicate)
 
-
 SELECT check_login_data('testUser','testPassword'); --should return true,teacher,1
 SELECT check_login_data('testUserFailed','testPassword'); --should return false,-,-
+
+SELECT add_session('abba','makro'); --should return true
+SELECT add_session('abba','makro'); --should return false
+
+SELECT delete_session('abba'); --should return true
 
 SELECT add_semester('summer',2018); --should return 1 (correct)
 SELECT add_semester('winter',2018); --should return 2 (correct)

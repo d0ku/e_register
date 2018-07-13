@@ -2,7 +2,6 @@ package core
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -10,7 +9,7 @@ import (
 	"log"
 )
 
-//TODO: that part is deprecated at the moment.
+//TODO: when session is created, we have to make sure that id will be unique.
 
 //User defines one logged user from session.
 type User struct {
@@ -24,11 +23,11 @@ type SessionManager struct {
 	usersToSessions map[string]string
 	sessionIDLength int
 	//If no dbConnection is provided, there won't be any operations done in SQL.
-	dbConnection *sql.DB
+	dbConnection *DBHandler
 }
 
 //GetSessionManager returns Session Manager with properly set up attributes.
-func GetSessionManager(sessionIDLength int, dbConnection *sql.DB) *SessionManager {
+func GetSessionManager(sessionIDLength int, dbConnection *DBHandler) *SessionManager {
 	manager := &SessionManager{sessionsToUsers: make(map[string]string), usersToSessions: make(map[string]string), sessionIDLength: 32, dbConnection: dbConnection}
 
 	return manager
@@ -88,13 +87,7 @@ func (manager *SessionManager) createSession(sessionID string, username string) 
 	manager.sessionsToUsers[sessionID] = username
 
 	if manager.dbConnection != nil {
-		query := "INSERT INTO SessionID(\"sessionid\", \"username\") VALUES('" + sessionID + "','" + username + "');"
-		fmt.Println(query)
-		res, err := dbConnection.Exec(query)
-		if err != nil {
-			log.Print(err)
-		}
-		log.Print(res)
+		manager.dbConnection.AddSession(sessionID, username)
 	}
 }
 
@@ -103,13 +96,7 @@ func (manager *SessionManager) RemoveSession(sessionID string) {
 	delete(manager.sessionsToUsers, manager.sessionsToUsers[manager.usersToSessions[sessionID]])
 	delete(manager.usersToSessions, manager.usersToSessions[sessionID])
 	if manager.dbConnection != nil {
-		query := "DELETE FROM Sessionid WHERE \"sessionid\"='" + sessionID + "';"
-		fmt.Println(query)
-		res, err := dbConnection.Exec(query)
-		if err != nil {
-			log.Print(err)
-		}
-		log.Print(res)
+		manager.dbConnection.DeleteSession(sessionID)
 	}
 }
 
@@ -120,7 +107,7 @@ func (manager *SessionManager) ReadSessionsFromDatabase() error {
 	}
 
 	manager.sessionsToUsers = make(map[string]string)
-	rows, err := dbConnection.Query("SELECT * FROM SessionID;")
+	rows, err := manager.dbConnection.Query("SELECT * FROM SessionID;")
 	if err != nil {
 		panic(err)
 	}

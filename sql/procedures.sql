@@ -42,6 +42,23 @@ BEGIN
 END
 $$ language plpgsql;
 
+CREATE OR REPLACE FUNCTION add_session(IN session_id text, username text) RETURNS BOOLEAN AS $$ 
+BEGIN
+    --return true if successfully added, false otherwise.
+    INSERT INTO SessionID("session_id","username") VALUES (session_id,username);
+    RETURN TRUE;
+    EXCEPTION WHEN integrity_constraint_violation THEN
+        RETURN FALSE;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION delete_session(IN session_id_in text) RETURNS BOOLEAN AS $$ 
+BEGIN
+    DELETE FROM SessionID WHERE session_id=session_id_in;
+    RETURN TRUE;
+END
+$$ language plpgsql;
+
 CREATE OR REPLACE FUNCTION add_semester(IN sem_type semester_type, year integer) RETURNS integer AS $$
 DECLARE
 --return id of semester, -1 if can't be added.

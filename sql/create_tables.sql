@@ -17,7 +17,7 @@ CREATE TABLE Users (
 );
 
 CREATE TABLE SessionID (
-    session_id text NOT NULL UNIQUE,
+    session_id text NOT NULL PRIMARY KEY,
     username text NOT NULL references Users(username)
 );
 

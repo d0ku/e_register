@@ -2,7 +2,6 @@ package core
 
 //TODO: sessions are now stored in database, they should be removed after certain amount of time.
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"html/template"
@@ -11,12 +10,9 @@ import (
 	"net/http"
 	"regexp"
 	"time"
-
-	//That's recommended way to import sql driver.
-	_ "github.com/lib/pq"
 )
 
-var dbConnection *sql.DB
+var dbHandler *DBHandler
 
 var sessionManager *SessionManager
 var templates map[string]*template.Template
@@ -167,16 +163,12 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		var usernameBase sql.NullString
-		err := dbConnection.QueryRow("SELECT check_login_data('" + username + "','" + password + "')").Scan(&usernameBase)
-		switch {
-		case err == sql.ErrNoRows || !usernameBase.Valid:
-			log.Printf("No user with matching username and password.")
-			return
-		case err != nil:
-			log.Fatal(err)
-			return
-		default:
+		user := dbHandler.CheckUserLogin(username, password)
+
+		if !user.exists {
+			fmt.Println("User nie istnieje")
+
+		} else {
 			//good password and username combination
 
 			//If we have stored sessionID for that user just send it back to him,
@@ -226,18 +218,15 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 
 	//Initialize DB connection.
 	//TODO: change user to something more secure (non-root).
-	var err error
-	//TODO: connect to postgres by SSL (sslmode=verify-full)
-
-	connStr := "user=" + databaseUser + " dbname=" + databaseName + " sslmode=disable"
-	dbConnection, err = sql.Open("postgres", connStr)
 
 	//Could not initialize connection.
+	temp, err := GetDatabaseHandler(databaseUser, databaseName)
 	if err != nil {
 		panic(err)
 	}
+	dbHandler = temp
 
-	sessionManager = GetSessionManager(32, dbConnection)
+	sessionManager = GetSessionManager(32, dbHandler)
 	sessionManager.ReadSessionsFromDatabase()
 
 	//TODO: some kind of login panel, where admin can add new users?
@@ -261,9 +250,4 @@ func Run(port string) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-//Close clears all connections.
-func Close() {
-	dbConnection.Close()
 }
