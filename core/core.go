@@ -47,8 +47,7 @@ func getUserDataFromRequest(response http.ResponseWriter, request *http.Request)
 	return user, nil
 }
 
-func parseAllTemplates() {
-	pageFolder := "./page/"
+func parseAllTemplates(pageFolder string) {
 	templates = make(map[string]*template.Template)
 
 	templateFiles, err := ioutil.ReadDir(pageFolder)
@@ -221,9 +220,9 @@ func registerHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 //Initialize sets up connection with database, and assigns handlers.
-func Initialize(databaseUser string, databaseName string) {
+func Initialize(databaseUser string, databaseName string, templatesPath string) {
 	//Initialize parsed templates.
-	parseAllTemplates()
+	parseAllTemplates(templatesPath)
 
 	//Initialize DB connection.
 	//TODO: change user to something more secure (non-root).
