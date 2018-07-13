@@ -34,7 +34,8 @@ CREATE TABLE Addresses (
     street text NOT NULL,
     house_number text NOT NULL,
     flat_number text,
-    postal_code text NOT NULL
+    postal_code text NOT NULL,
+    UNIQUE(city,street,house_number,flat_number,postal_code)
 );
 
 CREATE TABLE Schools (
@@ -42,7 +43,8 @@ CREATE TABLE Schools (
     full_name text NOT NULL,
     id_address integer references Addresses(id_address),
     typ school_type NOT NULL,
-    bought_offer offer_type NOT NULL
+    bought_offer offer_type NOT NULL,
+    UNIQUE(full_name,id_address,typ,bought_offer)
 );
 
 CREATE TABLE SchoolsNumbers (
@@ -59,7 +61,8 @@ CREATE TABLE Teachers (
     surename text NOT NULL,
     teacher_rank teacher_rank NOT NULL,
     sex sex_type NOT NULL,
-    date_of_birth date
+    date_of_birth date,
+    UNIQUE(id_school,id_address,forename,surename,teacher_rank,sex,date_of_birth)
 );
 
 CREATE TABLE TeachersNumbers (
@@ -70,7 +73,7 @@ CREATE TABLE TeachersNumbers (
 
 CREATE TABLE Subjects (
     id_subject SERIAL PRIMARY KEY,
-    name text NOT NULL
+    name text NOT NULL UNIQUE
 );
 
 CREATE TABLE TeachersSubjects (
@@ -92,7 +95,8 @@ CREATE TABLE Classes (
     start_date date NOT NULL,
     end_date date NOT NULL CHECK(end_date > start_date),
     letter VARCHAR(3) NOT NULL, -- TI, a, b
-    class_level integer NOT NULL -- 1,2,3...
+    class_level integer NOT NULL, -- 1,2,3...,
+    UNIQUE(id_school,id_educator,start_date,end_date,letter,class_level)
 );
 
 CREATE TABLE Lessons (
@@ -125,6 +129,12 @@ CREATE TABLE Students (
     forename text NOT NULL,
     sex sex_type NOT NULL,
     date_of_birth date NOT NULL
+);
+
+CREATE TABLE StudentsLessons (
+    id_student integer references Students(id_student),
+    id_lesson integer references Lessons(id_lesson),
+    PRIMARY KEY(id_student, id_lesson)
 );
 
 CREATE TABLE StudentsNumbers (
