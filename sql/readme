@@ -1,6 +1,0 @@
-order:
-extensions
-create_tables
-procedures
-
---TODO: delete attribute id_school from Teachers and create Table TeachersSchools instead, it is possible for a teacher to work in more than one place.
