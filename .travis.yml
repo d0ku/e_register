@@ -1,0 +1,10 @@
+language: go
+
+go:
+    - master
+
+git:
+    depth: 1
+
+before_script:
+    - go get github.com/lib/pq
