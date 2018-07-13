@@ -220,8 +220,8 @@ func registerHandler(response http.ResponseWriter, request *http.Request) {
 	templates["register.gtpl"].Execute(response, user)
 }
 
-//Run starts the server at default port and prints info in console how to connect to it.
-func Run() {
+//Initialize sets up connection with database, and assigns handlers.
+func Initialize(databaseUser string, databaseName string) {
 	//Initialize parsed templates.
 	parseAllTemplates()
 
@@ -229,7 +229,8 @@ func Run() {
 	//TODO: change user to something more secure (non-root).
 	var err error
 	//TODO: connect to postgres by SSL (sslmode=verify-full)
-	connStr := "user=d0ku dbname=database_project_go sslmode=disable"
+
+	connStr := "user=" + databaseUser + " dbname=" + databaseName + " sslmode=disable"
 	dbConnection, err = sql.Open("postgres", connStr)
 
 	//Could not initialize connection.
@@ -237,15 +238,8 @@ func Run() {
 		panic(err)
 	}
 
-	defer dbConnection.Close()
-
 	sessionManager = GetSessionManager(32, dbConnection)
 	sessionManager.ReadSessionsFromDatabase()
-
-	var port = "1234"
-
-	fmt.Println()
-	fmt.Println("Listen to me at: https://localhost:" + port)
 
 	//TODO: some kind of login panel, where admin can add new users?
 	http.HandleFunc("/login", loginHandler)
@@ -254,11 +248,23 @@ func Run() {
 	http.HandleFunc("/main", mainHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
+}
+
+//Run starts initialized server on specified port.
+func Run(port string) {
 	//Certificates are self signed, so they are not worth a penny, if this is supposed to go into production, certificates should be obtained from approppriate organisation.
-	err = http.ListenAndServeTLS(":"+port, "server.crt", "server.key", nil)
+	fmt.Println()
+	fmt.Println("Listen to me at: https://localhost:" + port)
+
+	err := http.ListenAndServeTLS(":"+port, "server.crt", "server.key", nil)
 
 	//Something went wrong with starting HTTPS server.
 	if err != nil {
 		panic(err)
 	}
+}
+
+//Close clears all connections.
+func Close() {
+	dbConnection.Close()
 }

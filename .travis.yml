@@ -8,3 +8,13 @@ git:
 
 before_script:
     - go get github.com/lib/pq
+    - psql -c 'CREATE DATABSE test_database;' -U postgres
+    - psql -c '\i ./sql/extensions.sql' -U postgres -d test_database
+    - psql -c '\i ./sql/create_tables.sql' -U postgres -d test_database
+    - psql -c '\i ./sql/procedures.sql' -U postgres -d test_database
+
+      #services:
+      #- postgresql
+
+addons:
+    postgresql "10.4"
