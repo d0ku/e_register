@@ -1,6 +1,9 @@
 package core
 
 //TODO: sessions are now stored in database, they should be removed after certain amount of time.
+//TODO: with each operation done on database check for sessions which end_date passed and remove them from both database and application.
+//	User has to perform action in 15 minutes, add counter on webpage. If he does not, javascript automatically logs him out and his session is deleted from both database and application cache.
+// If sessions are limited to 15 minutes period of time does it even make sense to store them in database?
 import (
 	"errors"
 	"fmt"
@@ -112,6 +115,16 @@ func logoutHandler(response http.ResponseWriter, request *http.Request) {
 	http.Redirect(response, request, "/main", http.StatusSeeOther)
 }
 
+func loginUsers(response http.ResponseWriter, request *http.Request) {
+	regex := regexp.MustCompile("/[A-z]*$")
+	userType := regex.FindString(request.URL.EscapedPath())[1:]
+	//Execute template with correct value to be set as hidden attribute in HTML form.
+	err := templates["login_page.gtpl"].Execute(response, userType)
+	if err != nil {
+		log.Print(err)
+	}
+}
+
 func loginHandler(response http.ResponseWriter, request *http.Request) {
 
 	fmt.Println(request.Method)
@@ -155,20 +168,18 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 		//Validate data, and check whether it can be used to log into database.
 		username := template.HTMLEscapeString(request.Form["username"][0])
 		password := template.HTMLEscapeString(request.Form["password"][0])
+		userType := template.HTMLEscapeString(request.Form["userType"][0])
 		fmt.Println(username)
 		fmt.Println(password)
-		if len(username) < 1 || len(password) < 8 {
-			//just display that no user found or that it is too empty?
-			fmt.Println("Too short password!")
-			return
-		}
+		//TODO: implement js on client-side that checks password length etc.
 
-		user := dbHandler.CheckUserLogin(username, password)
+		user := dbHandler.CheckUserLogin(username, password, userType)
 
 		if !user.exists {
-			fmt.Println("User nie istnieje")
+			fmt.Println("User does not exist!")
 
 		} else {
+			fmt.Println("User logged in!")
 			//good password and username combination
 
 			//If we have stored sessionID for that user just send it back to him,
@@ -226,8 +237,8 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	}
 	dbHandler = temp
 
-	sessionManager = GetSessionManager(32, dbHandler)
-	sessionManager.ReadSessionsFromDatabase()
+	sessionManager = GetSessionManager(32, time.Second*60*15)
+	//	sessionManager.ReadSessionsFromDatabase()
 
 	//TODO: some kind of login panel, where admin can add new users?
 	http.HandleFunc("/login", loginHandler)
@@ -235,6 +246,7 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	http.HandleFunc("/delete", deleteHandler)
 	http.HandleFunc("/main", mainHandler)
 	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/login/", loginUsers)
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
 }
 

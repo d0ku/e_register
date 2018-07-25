@@ -21,15 +21,16 @@ $$ language plpgsql;
 
 CREATE TYPE user_data AS (user_exists BOOLEAN, user_type user_type, id integer);
 
-CREATE OR REPLACE FUNCTION check_login_data(IN provided_username text, provided_password text) RETURNS user_data AS $$
+CREATE OR REPLACE FUNCTION check_login_data(IN provided_username text, provided_password text, provided_user_type user_type) RETURNS user_data AS $$
 DECLARE
 return_data user_data;
 BEGIN
     SELECT user_type, final_id
     INTO return_data.user_type, return_data.id
     FROM Users
-    WHERE username=provided_username
-    AND hashed_password = crypt(provided_password, hashed_password);
+    WHERE username = provided_username
+    AND hashed_password = crypt(provided_password, hashed_password)
+    AND user_type = provided_user_type;
 
     return_data.user_exists=true;
 

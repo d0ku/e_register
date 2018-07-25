@@ -1,16 +1,27 @@
 <!DOCTYPE html>
-<html>
+<--!TODO: add necessary meta in head>
+<html lang=pl>
     <head>
-    <title>Login Page</title>
+    <title>E-dziennik: Strona główna</title>
+    <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="CSS/reset.css">
     <link rel="stylesheet" type="text/css" href="CSS/base.css">
+    <link rel="stylesheet" type="text/css" href="CSS/login.css">
     </head>
     <body>
-        <h1 class="warning"> TEST </h1>
-        <form action="/login" method="post">
-            Username:<input type="text" name="username">
-            Password:<input type="password" name="password">
-            <input type="submit" value="Login">
-        </form>
+        <div id="container">
+            <a id="loginTeacher" class="loginButton" href="/login/teacher">
+                Nauczyciel
+            </a>
+            <a id="loginSchoolAdmin" class="loginButton" href="/login/schoolAdmin">
+                Admin
+            </a>
+            <a id="loginParent" class="loginButton" href="/login/parent">
+                Rodzic
+            </a>
+            <a id="loginStudent" class="loginButton" href="/login/student">
+                Uczeń
+            </a>
+        </div>
     </body>
 </html>

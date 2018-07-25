@@ -32,8 +32,8 @@ type userLoginData struct {
 	id        int
 }
 
-func (handler *DBHandler) CheckUserLogin(username string, password string) *userLoginData {
-	query := "SELECT * FROM check_login_data('" + username + "','" + password + "');"
+func (handler *DBHandler) CheckUserLogin(username string, password string, userType string) *userLoginData {
+	query := "SELECT * FROM check_login_data('" + username + "','" + password + "','" + userType + "');"
 	fmt.Println(query)
 	var exists bool
 	var user_type string

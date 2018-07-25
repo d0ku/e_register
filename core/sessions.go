@@ -4,12 +4,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"log"
+	"time"
 )
 
-//TODO: when session is created, we have to make sure that id will be unique.
+//TODO: with every iteration we check whether there are any too old sessions. Is this overhead?
 
 //User defines one logged user from session.
 type User struct {
@@ -19,45 +19,61 @@ type User struct {
 
 //SessionManager describes basic SessionManager for netApp.
 type SessionManager struct {
-	sessionsToUsers map[string]string
-	usersToSessions map[string]string
-	sessionIDLength int
-	//If no dbConnection is provided, there won't be any operations done in SQL.
-	dbConnection *DBHandler
+	sessionsToUsers          map[string]*Session
+	sessionIDLength          int
+	sessionLifePeriodSeconds time.Duration
+}
+
+//Session describes one session.
+type Session struct {
+	removeTime time.Time
+	data       map[string]string
+}
+
+func (manager *SessionManager) removeOldSessions() {
+	//remove all sessions whose lifespan ended.
+	timeNow := time.Now()
+	for index, session := range manager.sessionsToUsers {
+		if timeNow.After(session.removeTime) {
+			manager.RemoveSession(index)
+			log.Print("Session timed out: " + index)
+		}
+	}
 }
 
 //GetSessionManager returns Session Manager with properly set up attributes.
-func GetSessionManager(sessionIDLength int, dbConnection *DBHandler) *SessionManager {
-	manager := &SessionManager{sessionsToUsers: make(map[string]string), usersToSessions: make(map[string]string), sessionIDLength: 32, dbConnection: dbConnection}
+func GetSessionManager(sessionIDLength int, lifePeriod time.Duration) *SessionManager {
+	manager := &SessionManager{sessionsToUsers: make(map[string]*Session), sessionIDLength: 32, sessionLifePeriodSeconds: lifePeriod}
 
 	return manager
 }
 
-//FindSessionID returns matching sessionID basing on provided username or error if sessionID can't be found.
-func (manager *SessionManager) FindSessionID(username string) (string, error) {
-	value, ok := manager.usersToSessions[username]
-
-	if ok {
-		return value, nil
-	}
-
-	return "", errors.New("No sessionID for such username")
-}
-
 //FindUserName returns matching username basing on provided sessionID or error if username can't be found.
 func (manager *SessionManager) FindUserName(sessionID string) (string, error) {
+	manager.removeOldSessions()
 	value, ok := manager.sessionsToUsers[sessionID]
 
 	if ok {
-		return value, nil
+		return value.data["username"], nil
 	}
 
 	return "", errors.New("No user for such sessionID")
 }
 
-//GetSessionID returns already existing sessionID for username, or creates new and returns if needed.
-func (manager *SessionManager) GetSessionID(username string) string {
+//IsLoggedIn returns true if such sessionID is stored and false otherwise.
+func (manager *SessionManager) IsLoggedIn(sessionID string) bool {
+	//If such sessionID exists return true, false otherwise.
+	_, ok := manager.sessionsToUsers[sessionID]
+	if ok {
+		return true
+	}
 
+	return false
+}
+
+//GetSessionID returns unique sessionID for provided username.
+func (manager *SessionManager) GetSessionID(username string) string {
+	manager.removeOldSessions()
 	generateSessionID := func(length int) string {
 		bytes := make([]byte, length)
 
@@ -70,58 +86,27 @@ func (manager *SessionManager) GetSessionID(username string) string {
 		return base64.URLEncoding.EncodeToString(bytes)
 	}
 
-	sessionID, err := manager.FindSessionID(username)
-
-	if err == nil {
-		return sessionID
+	var sessionID string
+	for {
+		//Try to generate unique session id until there is no session with such id. possible BUG: check for race condition
+		sessionID = generateSessionID(manager.sessionIDLength) //TODO: make unique id
+		_, ok := manager.sessionsToUsers[sessionID]
+		if !ok {
+			break
+		}
 	}
 
-	sessionID = generateSessionID(manager.sessionIDLength) //TODO: make unique id
 	manager.createSession(sessionID, username)
 	return sessionID
-
 }
 
 func (manager *SessionManager) createSession(sessionID string, username string) {
-	manager.usersToSessions[username] = sessionID
-	manager.sessionsToUsers[sessionID] = username
-
-	if manager.dbConnection != nil {
-		manager.dbConnection.AddSession(sessionID, username)
-	}
+	manager.removeOldSessions()
+	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.sessionLifePeriodSeconds), make(map[string]string)}
+	manager.sessionsToUsers[sessionID].data["username"] = username
 }
 
 //RemoveSession removes session based on the provided sessionID.
 func (manager *SessionManager) RemoveSession(sessionID string) {
-	delete(manager.sessionsToUsers, manager.sessionsToUsers[manager.usersToSessions[sessionID]])
-	delete(manager.usersToSessions, manager.usersToSessions[sessionID])
-	if manager.dbConnection != nil {
-		manager.dbConnection.DeleteSession(sessionID)
-	}
-}
-
-//ReadSessionsFromDatabase tries to find session_id->username pairs in provided database in table SessionID.
-func (manager *SessionManager) ReadSessionsFromDatabase() error {
-	if manager.dbConnection == nil {
-		return errors.New("No database handler provided")
-	}
-
-	manager.sessionsToUsers = make(map[string]string)
-	rows, err := manager.dbConnection.Query("SELECT * FROM SessionID;")
-	if err != nil {
-		panic(err)
-	}
-
-	defer rows.Close()
-	var sessionID string
-	var username string
-	fmt.Println("Restoring sessions:")
-	for rows.Next() {
-		rows.Scan(&sessionID, &username)
-		manager.sessionsToUsers[sessionID] = username
-		manager.usersToSessions[username] = sessionID
-		fmt.Println("---> " + username)
-	}
-	fmt.Println("Sessions restored.")
-	return nil
+	delete(manager.sessionsToUsers, sessionID)
 }

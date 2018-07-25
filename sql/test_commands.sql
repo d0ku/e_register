@@ -1,8 +1,9 @@
 SELECT add_user('testUser','testPassword','teacher',1); --should return true (correct)
 SELECT add_user('testUser','testPassword','teacher',1); --should return false (duplicate)
 
-SELECT check_login_data('testUser','testPassword'); --should return true,teacher,1
-SELECT check_login_data('testUserFailed','testPassword'); --should return false,-,-
+SELECT check_login_data('testUser','testPassword', 'teacher'); --should return true,teacher,1
+SELECT check_login_data('testUserFailed','testPassword', 'parent'); --should return false,-,-
+SELECT check_login_data('testUser','testPassword', 'parent'); --should return false,-,- (bad user_type)
 
 SELECT add_session('abba','makro'); --should return true
 SELECT add_session('abba','makro'); --should return false
