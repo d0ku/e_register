@@ -16,11 +16,6 @@ CREATE TABLE Users (
     final_id integer NOT NULL
 );
 
-CREATE TABLE SessionID (
-    session_id text NOT NULL PRIMARY KEY,
-    username text NOT NULL references Users(username)
-);
-
 CREATE TABLE Semesters (
     id_semester SERIAL PRIMARY KEY,
     semester semester_type NOT NULL,
