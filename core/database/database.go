@@ -1,4 +1,4 @@
-package core
+package database
 
 import (
 	"database/sql"
@@ -26,13 +26,13 @@ func GetDatabaseHandler(username string, dbName string) (*DBHandler, error) {
 	return &DBHandler{dbConnection}, nil
 }
 
-type userLoginData struct {
-	exists    bool
-	user_type string
-	id        int
+type UserLoginData struct {
+	Exists    bool
+	User_type string
+	Id        int
 }
 
-func (handler *DBHandler) CheckUserLogin(username string, password string, userType string) *userLoginData {
+func (handler *DBHandler) CheckUserLogin(username string, password string, userType string) *UserLoginData {
 	query := "SELECT * FROM check_login_data('" + username + "','" + password + "','" + userType + "');"
 	fmt.Println(query)
 	var exists bool
@@ -42,7 +42,7 @@ func (handler *DBHandler) CheckUserLogin(username string, password string, userT
 	if err != nil {
 		log.Print(err)
 	}
-	return &userLoginData{exists, user_type, id}
+	return &UserLoginData{exists, user_type, id}
 }
 
 func (handler *DBHandler) AddSession(session_id string, username string) bool {

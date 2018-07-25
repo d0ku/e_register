@@ -10,9 +10,11 @@ import (
 	"net/http"
 	"regexp"
 	"time"
+
+	"github.com/d0ku/database_project_go/core/database"
 )
 
-var dbHandler *DBHandler
+var dbHandler *database.DBHandler
 
 var sessionManager *SessionManager
 var templates map[string]*template.Template
@@ -172,7 +174,7 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 
 		user := dbHandler.CheckUserLogin(username, password, userType)
 
-		if !user.exists {
+		if !user.Exists {
 			fmt.Println("User does not exist!")
 
 		} else {
@@ -228,7 +230,7 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	//TODO: change user to something more secure (non-root).
 
 	//Could not initialize connection.
-	temp, err := GetDatabaseHandler(databaseUser, databaseName)
+	temp, err := database.GetDatabaseHandler(databaseUser, databaseName)
 	if err != nil {
 		panic(err)
 	}

@@ -1,23 +1,46 @@
-package core
+package database
 
 import (
+	"flag"
 	"os"
 	"testing"
 )
 
-func TestMain(m *testing.M) {
-	temp, err := GetDatabaseHandler("postgres", "test_database")
-	if err != nil {
-		panic(err)
-	}
-	dbHandler = temp
+var (
+	database = flag.Bool("database", false, "run database integration tests")
+)
 
-	os.Exit(m.Run())
+func teardown() {
+	DBAddUserTeardown()
+
+}
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if *database {
+		temp, err := GetDatabaseHandler("postgres", "test_database")
+		if err != nil {
+			panic(err)
+		}
+		dbHandler = temp
+
+		result := m.Run()
+
+		teardown()
+		os.Exit(result)
+	} else {
+		os.Exit(0)
+	}
 }
 
 func TestDBAddUser(t *testing.T) {
-	dbHandler.QueryRow("DELETE FROM Users WHERE username='1234adduser'")
+	DBAddUserTeardown() //remove all possible before stuff.
 	//TODO: write test.
+	DBAddUserTeardown()
+}
+
+func DBAddUserTeardown() {
+	dbHandler.QueryRow("DELETE FROM Users WHERE username='1234adduser';")
 }
 
 func TestDBCheckLoginData(t *testing.T) {
