@@ -12,11 +12,12 @@ import (
 	"time"
 
 	"github.com/d0ku/database_project_go/core/database"
+	"github.com/d0ku/database_project_go/core/sessions"
 )
 
 var dbHandler *database.DBHandler
 
-var sessionManager *SessionManager
+var sessionManager *sessions.SessionManager
 var templates map[string]*template.Template
 
 //UserData represents data used to fill in GO HTML templates.
@@ -236,7 +237,7 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	}
 	dbHandler = temp
 
-	sessionManager = GetSessionManager(32, time.Second*60*15)
+	sessionManager = sessions.GetSessionManager(32, time.Second*60*15)
 	//	sessionManager.ReadSessionsFromDatabase()
 
 	//TODO: some kind of login panel, where admin can add new users?
