@@ -22,7 +22,7 @@ func TestDBAddUser(t *testing.T) {
 
 func TestDBCheckLoginData(t *testing.T) {
 	dbHandler.QueryRow("SELECT add_user('1234logindata','12345678','teacher',1)")
-	userData := dbHandler.CheckUserLogin("1234logindata", "12345678")
+	userData := dbHandler.CheckUserLogin("1234logindata", "12345678", "teacher")
 
 	if userData.exists != true {
 		t.Errorf("User exists in database but was not scanned properly.")
