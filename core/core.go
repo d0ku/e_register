@@ -1,9 +1,6 @@
 package core
 
-//TODO: sessions are now stored in database, they should be removed after certain amount of time.
-//TODO: with each operation done on database check for sessions which end_date passed and remove them from both database and application.
-//	User has to perform action in 15 minutes, add counter on webpage. If he does not, javascript automatically logs him out and his session is deleted from both database and application cache.
-// If sessions are limited to 15 minutes period of time does it even make sense to store them in database?
+//TODO:	User has to perform action in specified amount of time, add counter on webpage. If he does not, javascript automatically logs him out and his session is deleted from both database and application cache.
 import (
 	"errors"
 	"fmt"
