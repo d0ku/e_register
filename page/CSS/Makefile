@@ -7,3 +7,4 @@ clean:
 	rm -rf *.css
 	rm -rf *.css.map
 	rm -rf *~
+	rm -rf .sass-cache
