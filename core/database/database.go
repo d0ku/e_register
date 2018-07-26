@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 
 	_ "github.com/lib/pq"
 )
@@ -43,6 +44,20 @@ func (handler *DBHandler) CheckUserLogin(username string, password string, userT
 		log.Print(err)
 	}
 	return &UserLoginData{exists, user_type, id}
+}
+
+func (handler *DBHandler) CheckIfTeacherIsSchoolAdmin(teacherID int) int {
+	fmt.Println(teacherID)
+	query := "SELECT * FROM check_if_teacher_is_school_admin(" + strconv.Itoa(teacherID) + ");"
+	fmt.Println(query)
+	var output = -1
+	err := handler.QueryRow(query).Scan(&output)
+
+	if err != nil {
+		log.Print(err)
+	}
+
+	return output
 }
 
 func (handler *DBHandler) AddSession(session_id string, username string) bool {

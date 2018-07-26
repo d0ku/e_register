@@ -1,5 +1,5 @@
 -- TODO: big spell check
-CREATE TYPE user_type AS ENUM('teacher','student','parent', 'schoolAdmin');
+CREATE TYPE user_type AS ENUM('teacher','student','parent');
 CREATE TYPE school_type AS ENUM('LO','POD','TECH', 'ZAW');
 CREATE TYPE offer_type AS ENUM('standard','gold','diamond');
 CREATE TYPE teacher_rank AS ENUM('inż.', 'mgr.', 'mgr. inż.', 'dr.'); -- TODO: write more

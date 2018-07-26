@@ -1,5 +1,7 @@
 SELECT add_user('testUser','testPassword','teacher',1); --should return true (correct)
 SELECT add_user('testUser','testPassword','teacher',1); --should return false (duplicate)
+--SELECT add_user('testUser2','testPassword','teacher',1); --should return true (correct) --TODO: this should return false, as id duplicates first entry, there should be trigger for this
+SELECT add_user('testUser2','testPassword','teacher',2); --should return true (correct)
 
 SELECT check_login_data('testUser','testPassword', 'teacher'); --should return true,teacher,1
 SELECT check_login_data('testUserFailed','testPassword', 'parent'); --should return false,-,-
@@ -64,4 +66,6 @@ SELECT add_lesson(2,5,'08:00','08:45','Monday'); --should return -1 (non-existin
 SELECT add_teacher_to_lesson(1,1); --should return t (correct)
 SELECT add_teacher_to_lesson(1,1); --should return f (duplicate)
 
---TODO: there is a potential for UczniowieLekcje table where uczniowie can be assigned lessons indivdiually (e.g. language lessons where classes consist of people frmo many classes).
+SELECT check_if_teacher_is_school_admin(1); --should return 1
+SELECT check_if_teacher_is_school_admin(2); --should return -1
+SELECT check_if_teacher_is_school_admin(0); --should return -1

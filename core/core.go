@@ -171,6 +171,13 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 		userType := template.HTMLEscapeString(request.Form["userType"][0])
 		fmt.Println(username)
 		fmt.Println(password)
+
+		var checkSchool bool
+
+		if userType == "schoolAdmin" {
+			userType = "teacher"
+			checkSchool = true
+		}
 		//TODO: implement js on client-side that checks password length etc.
 
 		user := dbHandler.CheckUserLogin(username, password, userType)
@@ -179,6 +186,16 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 			fmt.Println("User does not exist!")
 
 		} else {
+
+			if checkSchool {
+				schoolID := dbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
+				if schoolID == -1 {
+					//ERROR OUT!
+					fmt.Println("NO ADMIN!")
+					return
+				}
+				fmt.Println("YUP, ADMIN!")
+			}
 			fmt.Println("User logged in!")
 			//good password and username combination
 

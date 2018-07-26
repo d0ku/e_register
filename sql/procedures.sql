@@ -210,4 +210,17 @@ BEGIN
 END
 $$ language plpgsql;
 
+CREATE OR REPLACE FUNCTION check_if_teacher_is_school_admin(IN teacher_id integer) RETURNS INTEGER AS $$
+DECLARE
+    to_return integer;
+BEGIN
+    --TODO: consider that one teacher can be admin in many schools
+
+    SELECT id_school FROM SchoolsAdministrators WHERE id_teacher=teacher_id INTO to_return;
+    IF to_return IS NULL THEN
+        RETURN -1;
+    END IF;
+    RETURN to_return;
+END
+$$ language plpgsql;
 
