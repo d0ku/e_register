@@ -1,2 +1,4 @@
 write tests!
 MORE TESTS!
+
+sql: schoolsadministrators should be allowed to have many to many relation. If we get more than one school admined by teacher, when he logs in he has to choose which school he wants to admin.

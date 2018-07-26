@@ -1,0 +1,109 @@
+@import 'base';
+
+
+#frame {
+    padding: 10px;
+    background-color: #062F4F;
+    display: inline-box;
+    width: 50%;
+    margin-left: 25%;
+    display: grid;
+    margin-top: 15%;
+    opacity: 0.95;
+
+    @include computer {
+        grid-template-columns:10% 70% 20%;
+        font-size:1.1em;
+    }
+}
+
+body {
+    background-image: url("../images/registers.jpg");
+    background-size: 100% ;
+    background-repeat: no-repeat;
+    background-color: gray;
+}
+
+.about {
+    font-size: 1.2em;
+    font-family: $about_font;
+}
+
+.help {
+   font-family: $help_font; 
+}
+
+#description {
+    margin-top: 3%;
+    font-size: 1.7em;
+    color:white;
+
+    @include computer {
+        grid-column: 2;
+    } 
+}
+
+#made_by {
+    font-family: $made_by_font;
+    color:white;
+
+    @include computer {
+        grid-column: 1;
+        grid-row: 5;
+    } 
+}
+
+.loginButton {
+    color: white;
+    display: grid-item;
+    font-size: 1.3em;
+    width: auto;
+    padding: 20px;
+    margin: 8px;
+    float: right;
+    background-color: green;
+    margin-right: 10%;
+    border-radius: 7px;
+    background-color:gray;
+    text-align: center;
+    font-family: $button_font;
+    opacity: 1.0;
+
+    @include computer {
+        grid-column: 3;
+    } 
+}
+
+/* Base colors for user_type are defined here. */
+#loginTeacher {
+    background-color: $teacher_color;
+}
+
+#loginTeacher:hover {
+    background-color: lighten($teacher_color, 10%);
+}
+
+#loginSchoolAdmin {
+    background-color: $admin_color;
+}
+
+#loginSchoolAdmin:hover {
+    background-color: lighten($admin_color, 10%);
+}
+
+
+#loginParent {
+    background-color: $parent_color;
+}
+
+#loginParent:hover {
+    background-color: lighten($parent_color, 10%);
+}
+
+#loginStudent {
+    background-color: $student_color;
+}
+
+#loginStudent:hover {
+    background-color: lighten($student_color, 10%);
+}
