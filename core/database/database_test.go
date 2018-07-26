@@ -10,6 +10,8 @@ var (
 	database = flag.Bool("database", false, "run database integration tests")
 )
 
+var dbHandler *DBHandler
+
 func teardown() {
 	DBAddUserTeardown()
 
@@ -47,15 +49,15 @@ func TestDBCheckLoginData(t *testing.T) {
 	dbHandler.QueryRow("SELECT add_user('1234logindata','12345678','teacher',1)")
 	userData := dbHandler.CheckUserLogin("1234logindata", "12345678", "teacher")
 
-	if userData.exists != true {
+	if userData.Exists != true {
 		t.Errorf("User exists in database but was not scanned properly.")
 	}
 
-	if userData.user_type != "teacher" {
+	if userData.User_type != "teacher" {
 		t.Errorf("User type was not scanned properly")
 	}
 
-	if userData.id != 1 {
+	if userData.Id != 1 {
 		t.Errorf("User id was not scanned properly")
 	}
 }
