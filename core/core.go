@@ -273,7 +273,7 @@ func Run(port string) {
 	fmt.Println()
 	fmt.Println("Listen to me at: https://localhost:" + port)
 
-	err := http.ListenAndServeTLS(":"+port, "server.crt", "server.key", nil)
+	err := http.ListenAndServeTLS(":"+port, "certs/server.crt", "certs/server.key", nil)
 
 	//Something went wrong with starting HTTPS server.
 	if err != nil {
