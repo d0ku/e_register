@@ -1,4 +1,4 @@
-all: sql css app
+all: sql css app tests
 
 app:
 	go build -o database_project_go
@@ -12,3 +12,6 @@ css:
 
 clean:
 	cd page/CSS && make clean
+
+tests:
+	go test ./...
