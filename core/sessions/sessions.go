@@ -20,14 +20,19 @@ type User struct {
 //SessionManager describes basic SessionManager for netApp.
 type SessionManager struct {
 	sessionsToUsers          map[string]*Session
-	sessionIDLength          int
-	sessionLifePeriodSeconds time.Duration
+	SessionIDLength          int
+	SessionLifePeriodSeconds time.Duration
 }
 
 //Session describes one session.
 type Session struct {
 	removeTime time.Time
 	data       map[string]string
+}
+
+//GetSessionCount returns current amount of sessions.
+func (manager *SessionManager) GetSessionCount() int {
+	return len(manager.sessionsToUsers)
 }
 
 func (manager *SessionManager) removeOldSessions() {
@@ -43,7 +48,7 @@ func (manager *SessionManager) removeOldSessions() {
 
 //GetSessionManager returns Session Manager with properly set up attributes.
 func GetSessionManager(sessionIDLength int, lifePeriod time.Duration) *SessionManager {
-	manager := &SessionManager{sessionsToUsers: make(map[string]*Session), sessionIDLength: 32, sessionLifePeriodSeconds: lifePeriod}
+	manager := &SessionManager{sessionsToUsers: make(map[string]*Session), SessionIDLength: sessionIDLength, SessionLifePeriodSeconds: lifePeriod}
 
 	return manager
 }
@@ -89,7 +94,7 @@ func (manager *SessionManager) GetSessionID(username string) string {
 	var sessionID string
 	for {
 		//Try to generate unique session id until there is no session with such id. possible BUG: check for race condition
-		sessionID = generateSessionID(manager.sessionIDLength) //TODO: make unique id
+		sessionID = generateSessionID(manager.SessionIDLength)
 		_, ok := manager.sessionsToUsers[sessionID]
 		if !ok {
 			break
@@ -102,7 +107,7 @@ func (manager *SessionManager) GetSessionID(username string) string {
 
 func (manager *SessionManager) createSession(sessionID string, username string) {
 	manager.removeOldSessions()
-	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.sessionLifePeriodSeconds), make(map[string]string)}
+	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.SessionLifePeriodSeconds), make(map[string]string)}
 	manager.sessionsToUsers[sessionID].data["username"] = username
 }
 
