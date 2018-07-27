@@ -12,6 +12,7 @@ before_script:
     - psql -c '\i ./sql/extensions.sql' -U postgres -d test_database
     - psql -c '\i ./sql/create_tables.sql' -U postgres -d test_database
     - psql -c '\i ./sql/procedures.sql' -U postgres -d test_database
+    - npm install -g sass
 
       #services:
       #- postgresql
