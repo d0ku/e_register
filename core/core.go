@@ -11,11 +11,11 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/d0ku/database_project_go/core/database"
+	"github.com/d0ku/database_project_go/core/databaseLayer"
 	"github.com/d0ku/database_project_go/core/sessions"
 )
 
-var dbHandler *database.DBHandler
+var dbHandler *databaseLayer.DBHandler
 
 var sessionManager *sessions.SessionManager
 var templates map[string]*template.Template
@@ -249,7 +249,7 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	//TODO: change user to something more secure (non-root).
 
 	//Could not initialize connection.
-	temp, err := database.GetDatabaseHandler(databaseUser, databaseName)
+	temp, err := databaseLayer.GetDatabaseHandler(databaseUser, databaseName)
 	if err != nil {
 		panic(err)
 	}

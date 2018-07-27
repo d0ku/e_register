@@ -14,8 +14,5 @@ before_script:
     - psql -c '\i ./sql/procedures.sql' -U postgres -d test_database
     - npm install -g sass
 
-      #services:
-      #- postgresql
-
 addons:
     postgresql "10.4"
