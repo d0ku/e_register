@@ -2,17 +2,22 @@
 
 
 #frame {
-    padding: 10px;
     background-color: #062F4F;
     display: inline-box;
-    width: 50%;
-    margin-left: 25%;
-    display: grid;
+    width: 90%;
+    margin-left: 5%;
+    margin-right:5%;
+    padding: 10px;
     margin-top: 15%;
     opacity: 0.95;
+    display: grid;
+    grid-template-columns: auto;
+
 
     @include computer {
-        grid-template-columns:10% 70% 20%;
+        margin-left: 25%;
+        width: 50%;
+        grid-template-columns:10% 60% 30%;
         font-size:1.1em;
     }
 }
@@ -54,13 +59,14 @@ body {
 }
 
 .loginButton {
+    align: center;
     color: white;
     display: grid-item;
-    font-size: 1.3em;
     width: auto;
-    padding: 20px;
+    padding: 30px;
     margin: 8px;
-    float: right;
+    display:block;
+    //float: right;
     background-color: green;
     margin-right: 10%;
     border-radius: 7px;
@@ -71,10 +77,10 @@ body {
 
     @include computer {
         grid-column: 3;
+        font-size: 1.3em;
     } 
 }
 
-/* Base colors for user_type are defined here. */
 #loginTeacher {
     background-color: $teacher_color;
 }
@@ -90,7 +96,6 @@ body {
 #loginSchoolAdmin:hover {
     background-color: lighten($admin_color, 10%);
 }
-
 
 #loginParent {
     background-color: $parent_color;

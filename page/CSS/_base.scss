@@ -1,5 +1,9 @@
 @import 'reset';
 
+* { 
+    box-sizing: border-box;
+}
+
 /* Base colors for user_type are defined here. */
 
 $teacher_color: #800000;
