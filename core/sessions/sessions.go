@@ -27,7 +27,7 @@ type SessionManager struct {
 //Session describes one session.
 type Session struct {
 	removeTime time.Time
-	data       map[string]string
+	Data       map[string]string
 }
 
 //GetSessionCount returns current amount of sessions.
@@ -51,18 +51,6 @@ func GetSessionManager(sessionIDLength int, lifePeriod time.Duration) *SessionMa
 	manager := &SessionManager{sessionsToUsers: make(map[string]*Session), SessionIDLength: sessionIDLength, SessionLifePeriodSeconds: lifePeriod}
 
 	return manager
-}
-
-//FindUserName returns matching username basing on provided sessionID or error if username can't be found.
-func (manager *SessionManager) FindUserName(sessionID string) (string, error) {
-	manager.removeOldSessions()
-	value, ok := manager.sessionsToUsers[sessionID]
-
-	if ok {
-		return value.data["username"], nil
-	}
-
-	return "", errors.New("No user for such sessionID")
 }
 
 //IsLoggedIn returns true if such sessionID is stored and false otherwise.
@@ -105,10 +93,21 @@ func (manager *SessionManager) GetSessionID(username string) string {
 	return sessionID
 }
 
+//GetSession returns session coupled with provided sessionID.
+func (manager *SessionManager) GetSession(sessionID string) (*Session, error) {
+	session, ok := manager.sessionsToUsers[sessionID]
+
+	if !ok {
+		return nil, errors.New("There is no session with such sessionID")
+	}
+
+	return session, nil
+}
+
 func (manager *SessionManager) createSession(sessionID string, username string) {
 	manager.removeOldSessions()
 	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.SessionLifePeriodSeconds), make(map[string]string)}
-	manager.sessionsToUsers[sessionID].data["username"] = username
+	manager.sessionsToUsers[sessionID].Data["username"] = username
 }
 
 //RemoveSession removes session based on the provided sessionID.

@@ -33,14 +33,15 @@ func getUserDataFromRequest(response http.ResponseWriter, request *http.Request)
 		return user, errors.New("No cookie set")
 	}
 
-	username, err := sessionManager.FindUserName(cookie.Value)
+	session, err := sessionManager.GetSession(cookie.Value)
+
 	if err != nil {
 		//Delete cookie which is notrecognized on server side.
 		return user, errors.New("That session does not exist")
 		cookie.Expires = time.Unix(0, 0)
 		http.SetCookie(response, cookie)
 	}
-	user.UserName = username
+	user.UserName = session.Data["username"]
 	user.IsLogged = true
 
 	return user, nil
@@ -141,7 +142,7 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		username, err := sessionManager.FindUserName(cookie.Value)
+		session, err := sessionManager.GetSession(cookie.Value)
 
 		if err != nil {
 			log.Print("Client side thinks it is logged in, but it is not.")
@@ -155,7 +156,7 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 
 		}
 
-		err = templates["login_personal.gtpl"].Execute(response, username)
+		err = templates["login_personal.gtpl"].Execute(response, session.Data["username"])
 		if err != nil {
 			log.Print(err)
 		}
