@@ -20,6 +20,11 @@ func GetDatabaseHandler(username string, dbName string) (*DBHandler, error) {
 	connStr := "user=" + username + " dbname=" + dbName + " sslmode=disable"
 	dbConnection, err := sql.Open("postgres", connStr)
 
+	if err == nil {
+		//Check if connection can be established (password matches etc.)
+		err = dbConnection.Ping()
+	}
+
 	if err != nil {
 		return nil, err
 	}
