@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/d0ku/database_project_go/core"
 )
@@ -22,6 +25,7 @@ func main() {
 	config := make(map[string]string)
 	config["host"] = "localhost"
 	config["redirect_http_to_https"] = "0"
+	config["cookie_life_time"] = "900"
 
 	for _, line := range lines {
 		fmt.Println(line)
@@ -39,7 +43,14 @@ func main() {
 
 	fmt.Println(config)
 
-	core.Initialize(config["db_username"], config["db_name"], config["web_assets_path"])
+	temp, err := strconv.Atoi(config["cookie_life_time"])
+	if err != nil {
+		log.Panic("Could not parse cookie_life_time value.")
+	}
+
+	cookieLifeTime := time.Duration(temp)
+
+	core.Initialize(config["db_username"], config["db_name"], config["web_assets_path"], cookieLifeTime)
 
 	core.RunTLS(config["https_port"], config["http_port"], redirect, config["host"], config["server_cert"], config["server_key"])
 }

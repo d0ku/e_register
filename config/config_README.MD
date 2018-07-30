@@ -9,3 +9,4 @@ db_username -> username used to access database
 db_name -> name of database that should be accessed
 db_sslmode -> SSL mode to be used when connecting with database
 web_assets_path -> path to folder which contains all HTML, CSS etc. specific files (relative will work, absolute are much better option)
+cookie_life_time -> describes time (in seconds) after which user will be automatically logged out if he does not do something. If not specified, defaults to 900 seconds.
