@@ -122,9 +122,9 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginUsers(w http.ResponseWriter, r *http.Request) {
-	//TODO: this can be done faster and better using rURI and strings split
-	regex := regexp.MustCompile("/[A-z]*$")
-	userType := regex.FindString(r.URL.EscapedPath())[1:]
+	fields := strings.Split(r.RequestURI, "/")
+	userType := fields[len(fields)-1]
+
 	//Execute template with correct value to be set as hidden attribute in HTML form.
 	err := templates["login_page.gtpl"].Execute(w, userType)
 	if err != nil {
