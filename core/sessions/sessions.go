@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-//TODO: with every iteration we check whether there are any too old sessions. Is this overhead?
+//Old sessions are removed automatically only when there is a request for new session.
+//Of course session expiration time is validated when session is queried from manager.
 
 //User defines one logged user from session.
 type User struct {
@@ -66,7 +67,6 @@ func (manager *SessionManager) IsLoggedIn(sessionID string) bool {
 
 //GetSessionID returns unique sessionID for provided username.
 func (manager *SessionManager) GetSessionID(username string) string {
-	manager.removeOldSessions()
 	generateSessionID := func(length int) string {
 		bytes := make([]byte, length)
 
@@ -99,6 +99,13 @@ func (manager *SessionManager) GetSession(sessionID string) (*Session, error) {
 
 	if !ok {
 		return nil, errors.New("There is no session with such sessionID")
+	}
+
+	//check if session is still valid.
+
+	if session.removeTime.Before(time.Now()) {
+		delete(manager.sessionsToUsers, sessionID)
+		return nil, errors.New("Session is outdated and has to be deleted")
 	}
 
 	return session, nil

@@ -1,6 +1,10 @@
 package core
 
-//TODO:	User has to perform action in specified amount of time, add counter on webpage. If he does not, javascript automatically logs him out and his session is deleted from both database and application cache.
+//TODO:	User has to perform action in specified amount of time, add counter of cookie lifetime on webpage.
+
+//User session life period is stored in cookie and removed after time ends.
+
+//All requests are checked for sessionID cookie when we get them, so there is no need to check for errors in getting that cookie in later requests.
 import (
 	"errors"
 	"fmt"
@@ -102,7 +106,7 @@ func mainHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func logoutHandler(response http.ResponseWriter, request *http.Request) {
-	cookie, err := request.Cookie("sessionID")
+	cookie, _ := request.Cookie("sessionID")
 	if err != nil {
 		log.Print("Try to log out not yet logged in user.")
 		//TODO: display something that user is not even logged in, or just ignore it and redirect to main.
@@ -256,11 +260,23 @@ func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 	})
 }
 
-func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func redirectWithErrorToLogin(h func(http.ResponseWriter, *http.Request), messagePorts ...string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("sessionID")
 
-		templates["not_logged.gtpl"].Execute(w, nil)
-	})
+		if err != nil {
+			log.Print(err)
+			templates["not_logged.gtpl"].Execute(w, nil)
+			return
+		}
+
+		_, ok := sessionManager.GetSession(cookie.Value)
+
+		if ok != nil {
+			log.Print("User from: " + r.Host + " tried to log in with incorrect cookie.")
+			templates["not_logged.gtpl"].Execute(w, nil)
+		}
+	}
 }
 
 func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
@@ -287,10 +303,10 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	//TODO: some kind of login panel, where admin can add new users?
 
 	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/logout", logoutHandler)
-	http.HandleFunc("/delete", deleteHandler)
-	http.HandleFunc("/main", mainHandler)
-	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/logout", redirectWithErrorToLogin(logoutHandler))
+	//http.HandleFunc("/delete", redirectWithErrorToLogin(deleteHandler))
+	http.HandleFunc("/main", redirectWithErrorToLogin(mainHandler))
+	//	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login/", loginUsers)
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
 }
