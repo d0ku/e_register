@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/d0ku/database_project_go/core/databaseLayer"
@@ -244,8 +245,14 @@ func registerHandler(response http.ResponseWriter, request *http.Request) {
 func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		log.Print("HTTP REDIRECT")
-		//http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+		host := r.Host
+		if i := strings.Index(host, ":"); i != -1 {
+			host = host[:i]
+		}
+		redirectAddress := "https://" + host + ":" + ports[0] + r.RequestURI
+
+		log.Print(redirectAddress)
+		http.Redirect(w, r, redirectAddress, http.StatusMovedPermanently)
 	})
 }
 
@@ -286,7 +293,7 @@ func RunTLS(HTTPSport string, HTTPort string, redirectHTTPtoHTTPS bool, hostname
 
 	if redirectHTTPtoHTTPS {
 		go func() {
-			err := http.ListenAndServe(":"+HTTPort, redirectToHTTPS(http.HandlerFunc(placeHolderHandler)))
+			err := http.ListenAndServe(":"+HTTPort, redirectToHTTPS(http.HandlerFunc(placeHolderHandler), HTTPSport))
 			if err != nil {
 				log.Fatal(err)
 			}
