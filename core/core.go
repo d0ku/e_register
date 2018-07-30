@@ -256,6 +256,13 @@ func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 	})
 }
 
+func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		templates["not_logged.gtpl"].Execute(w, nil)
+	})
+}
+
 func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
@@ -278,6 +285,7 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	//	sessionManager.ReadSessionsFromDatabase()
 
 	//TODO: some kind of login panel, where admin can add new users?
+
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/delete", deleteHandler)

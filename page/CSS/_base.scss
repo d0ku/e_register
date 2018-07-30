@@ -11,6 +11,10 @@ $admin_color: #982601;
 $parent_color: #813772;
 $student_color: #008000;
 
+$background_color: #062F4F;
+$warning_background_color: #FFAE42; //TODO: this color is same as teacher color, find new for this.
+$warning_color: #C40000;
+
 $made_by_font: 'Yellowtail', sans-serif;
 $about_font: 'Merriweather', serif;
 $help_font: 'Lato', sans-serif;
@@ -92,4 +96,73 @@ a {
     .col-10 {width: 83.33%;}
     .col-11 {width: 91.66%;}
     .col-12 {width: 100%;}
-} 
+}
+
+
+.frame {
+    background-color: $background_color;
+    display: inline-box;
+    width: 90%;
+    margin-left: 5%;
+    margin-right:5%;
+    padding: 10px;
+    margin-top: 15%;
+    opacity: 0.95;
+    display: grid;
+    color:white;
+
+    @include computer {
+        margin-left: 25%;
+        width: 50%;
+        font-size:1.1em;
+    }
+}
+
+.about {
+    font-size: 1.2em;
+    font-family: $about_font;
+}
+
+.help {
+   font-family: $help_font; 
+}
+
+.warning {
+   font-family: $help_font; 
+   color: $warning_color;
+   font-weight: bold;
+}
+
+
+body {
+    background-image: url("../images/registers.jpg");
+    background-size: 100% ;
+    background-repeat: no-repeat;
+    background-color: gray;
+}
+
+#made_by {
+    font-family: $made_by_font;
+    color:white;
+}
+
+#description {
+    margin-top: 3%;
+    font-size: 1.7em;
+    color:white;
+}
+
+.button {
+    align: center;
+    color: white;
+    width: auto;
+    padding: 30px;
+    margin: 8px;
+    display:block;
+    margin-right: 10%;
+    border-radius: 7px;
+    background-color:gray;
+    text-align: center;
+    font-family: $button_font;
+    opacity: 1.0;
+}

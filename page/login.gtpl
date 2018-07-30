@@ -10,7 +10,7 @@
     </head>
     <body>
         <div id="container">
-            <div id="frame">
+            <div class="frame">
                 <div id="made_by">
                     By d0ku 2018
                 </div>
