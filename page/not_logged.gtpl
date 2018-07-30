@@ -14,11 +14,13 @@
                 <span class="warning">
                     Nie jesteś zalogowany i nie masz dostępu do tej części strony!
                 </span>
+                    Prawdopodobnie Twoja sesja wygasła.
+                <span class="help">
                     Kliknij na przycisk, aby przejść do strony logowania.
+                </span>
                 <a class="button" href="/login">PRZEKIERUJ</a>
             </div>
        </div>
-       <footer>
        <div id="made_by">
            By d0ku 2018
        </div>
