@@ -4,7 +4,7 @@ package core
 
 //User session life period is stored in cookie and removed after time ends.
 
-//All requests are checked for sessionID cookie when we get them, so there is no need to check for errors in getting that cookie in later requests.
+//All rs are checked for sessionID cookie when we get them, so there is no need to check for errors in getting that cookie in later rs.
 import (
 	"errors"
 	"fmt"
@@ -31,9 +31,9 @@ type UserData struct {
 	IsLogged bool
 }
 
-func getUserDataFromRequest(response http.ResponseWriter, request *http.Request) (*UserData, error) {
+func getUserDataFromRequest(w http.ResponseWriter, r *http.Request) (*UserData, error) {
 	user := &UserData{}
-	cookie, err := request.Cookie("sessionID")
+	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		return user, errors.New("No cookie set")
 	}
@@ -44,7 +44,7 @@ func getUserDataFromRequest(response http.ResponseWriter, request *http.Request)
 		//Delete cookie which is notrecognized on server side.
 		return user, errors.New("That session does not exist")
 		cookie.Expires = time.Unix(0, 0)
-		http.SetCookie(response, cookie)
+		http.SetCookie(w, cookie)
 	}
 	user.UserName = session.Data["username"]
 	user.IsLogged = true
@@ -77,15 +77,15 @@ func parseAllTemplates(pageFolder string) {
 	fmt.Println("Finished parsing.")
 }
 
-func mainHandler(response http.ResponseWriter, request *http.Request) {
-	if request.Method == "GET" {
+func mainHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
 
-		user, err := getUserDataFromRequest(response, request)
+		user, err := getUserDataFromRequest(w, r)
 		//In theory we don't have to check whether username exists, as parsing template without arguments could just render unlogged site?
 
 		/*
 			if err != nil {
-				err := templates["index.gtpl"].Execute(response, nil)
+				err := templates["index.gtpl"].Execute(w, nil)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -94,7 +94,7 @@ func mainHandler(response http.ResponseWriter, request *http.Request) {
 			}
 		*/
 
-		err = templates["index.gtpl"].Execute(response, user)
+		err = templates["index.gtpl"].Execute(w, user)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,8 +105,8 @@ func mainHandler(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func logoutHandler(response http.ResponseWriter, request *http.Request) {
-	cookie, _ := request.Cookie("sessionID")
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		log.Print("Try to log out not yet logged in user.")
 		//TODO: display something that user is not even logged in, or just ignore it and redirect to main.
@@ -115,35 +115,36 @@ func logoutHandler(response http.ResponseWriter, request *http.Request) {
 
 	//Delete cookie and redirect to main.
 	cookie.Expires = time.Unix(0, 0)
-	http.SetCookie(response, cookie)
+	http.SetCookie(w, cookie)
 	sessionManager.RemoveSession(cookie.Value)
 
-	http.Redirect(response, request, "/main", http.StatusSeeOther)
+	http.Redirect(w, r, "/main", http.StatusSeeOther)
 }
 
-func loginUsers(response http.ResponseWriter, request *http.Request) {
-	//TODO: this can be done faster and better using requestURI and strings split
+func loginUsers(w http.ResponseWriter, r *http.Request) {
+	//TODO: this can be done faster and better using rURI and strings split
 	regex := regexp.MustCompile("/[A-z]*$")
-	userType := regex.FindString(request.URL.EscapedPath())[1:]
+	userType := regex.FindString(r.URL.EscapedPath())[1:]
 	//Execute template with correct value to be set as hidden attribute in HTML form.
-	err := templates["login_page.gtpl"].Execute(response, userType)
+	err := templates["login_page.gtpl"].Execute(w, userType)
 	if err != nil {
 		log.Print(err)
 	}
 }
 
-func loginHandler(response http.ResponseWriter, request *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println(request.Method)
-	if request.Method == "GET" {
+	fmt.Println(r.Method)
+	if r.Method == "GET" {
 		//if logged in display personalized site, else display login site
 
-		cookie, err := request.Cookie("sessionID")
+		cookie, err := r.Cookie("sessionID")
 		if err != nil {
+			log.Print("Normal try to log in from: " + r.Host)
 			//not logged in, cookie does not exist
-			err := templates["login.gtpl"].Execute(response, nil)
+			err := templates["login.gtpl"].Execute(w, nil)
 			if err != nil {
-				log.Fatal(err)
+				log.Print(err)
 			}
 			return
 		}
@@ -155,14 +156,14 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 
 			//TODO: display something about that he has to relogin (probably redirect should be enough).
 			cookie.Expires = time.Unix(0, 0)
-			http.SetCookie(response, cookie)
-			http.Redirect(response, request, "/main", http.StatusSeeOther)
+			http.SetCookie(w, cookie)
+			http.Redirect(w, r, "/main", http.StatusSeeOther)
 			//user thinks he is logged in, but it is not true.
 			return
 
 		}
 
-		err = templates["login_personal.gtpl"].Execute(response, session.Data["username"])
+		err = templates["login_personal.gtpl"].Execute(w, session.Data["username"])
 		if err != nil {
 			log.Print(err)
 		}
@@ -170,12 +171,12 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 
 		//logged in
 
-	} else {
-		request.ParseForm()
+	} else { //if r type is POST
+		r.ParseForm()
 		//Validate data, and check whether it can be used to log into database.
-		username := template.HTMLEscapeString(request.Form["username"][0])
-		password := template.HTMLEscapeString(request.Form["password"][0])
-		userType := template.HTMLEscapeString(request.Form["userType"][0])
+		username := template.HTMLEscapeString(r.Form["username"][0])
+		password := template.HTMLEscapeString(r.Form["password"][0])
+		userType := template.HTMLEscapeString(r.Form["userType"][0])
 		fmt.Println(username)
 		fmt.Println(password)
 
@@ -227,23 +228,23 @@ func loginHandler(response http.ResponseWriter, request *http.Request) {
 			*/
 
 			//Send cookie with sessionID to Client.
-			http.SetCookie(response, cookie)
+			http.SetCookie(w, cookie)
 
-			http.Redirect(response, request, "/main", http.StatusSeeOther)
+			http.Redirect(w, r, "/main", http.StatusSeeOther)
 		}
 	}
 }
 
-func deleteHandler(response http.ResponseWriter, request *http.Request) {
-	response.Write([]byte(request.URL.String()))
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(r.URL.String()))
 }
 
-func registerHandler(response http.ResponseWriter, request *http.Request) {
-	user, _ := getUserDataFromRequest(response, request)
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := getUserDataFromRequest(w, r)
 
 	//TODO: write register.gtpl, if user has adequate privileges, (add variable to User Structure) display adding users panel,
 	// else display you don't have privileges.
-	templates["register.gtpl"].Execute(response, user)
+	templates["register.gtpl"].Execute(w, user)
 }
 
 func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
