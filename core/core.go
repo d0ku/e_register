@@ -117,6 +117,7 @@ func logoutHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func loginUsers(response http.ResponseWriter, request *http.Request) {
+	//TODO: this can be done faster and better using requestURI and strings split
 	regex := regexp.MustCompile("/[A-z]*$")
 	userType := regex.FindString(request.URL.EscapedPath())[1:]
 	//Execute template with correct value to be set as hidden attribute in HTML form.
@@ -240,6 +241,17 @@ func registerHandler(response http.ResponseWriter, request *http.Request) {
 	templates["register.gtpl"].Execute(response, user)
 }
 
+func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		log.Print("HTTP REDIRECT")
+		//http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+	})
+}
+
+func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
+}
+
 //Initialize sets up connection with database, and assigns handlers.
 func Initialize(databaseUser string, databaseName string, templatesPath string) {
 	//Initialize parsed templates.
@@ -268,13 +280,23 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
 }
 
-//Run starts initialized server on specified port.
-func Run(port string) {
+//RunTLS starts initialized server on specified port with TLS.
+func RunTLS(HTTPSport string, HTTPort string, redirectHTTPtoHTTPS bool, hostname string, serverCert string, serverKey string) {
 	//Certificates are self signed, so they are not worth a penny, if this is supposed to go into production, certificates should be obtained from approppriate organisation.
-	fmt.Println()
-	fmt.Println("Listen to me at: https://localhost:" + port)
 
-	err := http.ListenAndServeTLS(":"+port, "certs/server.crt", "certs/server.key", nil)
+	if redirectHTTPtoHTTPS {
+		go func() {
+			err := http.ListenAndServe(":"+HTTPort, redirectToHTTPS(http.HandlerFunc(placeHolderHandler)))
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
+
+	fmt.Println()
+	fmt.Println("Listen to me at: https://" + hostname + ":" + HTTPSport)
+
+	err := http.ListenAndServeTLS(":"+HTTPSport, "certs/server.crt", "certs/server.key", nil)
 
 	//Something went wrong with starting HTTPS server.
 	if err != nil {

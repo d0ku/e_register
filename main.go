@@ -20,6 +20,8 @@ func main() {
 	lines = lines[0 : len(lines)-1]
 
 	config := make(map[string]string)
+	config["host"] = "localhost"
+	config["redirect_http_to_https"] = "0"
 
 	for _, line := range lines {
 		fmt.Println(line)
@@ -27,8 +29,17 @@ func main() {
 		config[lineElems[0]] = lineElems[1]
 	}
 
+	val := config["redirect_http_to_https"]
+
+	var redirect bool
+
+	if val == "1" {
+		redirect = true
+	}
+
 	fmt.Println(config)
 
-	core.Initialize(config["username"], config["database_name"], config["html_templates_path"])
-	core.Run(config["port"])
+	core.Initialize(config["db_username"], config["db_name"], config["web_assets_path"])
+
+	core.RunTLS(config["https_port"], config["http_port"], redirect, config["host"], config["server_cert"], config["server_key"])
 }
