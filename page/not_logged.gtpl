@@ -14,12 +14,13 @@
                 <span class="warning">
                     Nie jesteś zalogowany i nie masz dostępu do tej części strony!
                 </span>
-                    Za chwilę zostaniesz przekierowany na stronę logowania. Jeżeli nie nastąpi to w ciągu 5 sekund, kliknij link znajdujący się poniżej.
+                    Kliknij na przycisk, aby przejść do strony logowania.
                 <a class="button" href="/login">PRZEKIERUJ</a>
-                <div id="made_by">
-                    By d0ku 2018
-                </div>
             </div>
-        </div>
+       </div>
+       <footer>
+       <div id="made_by">
+           By d0ku 2018
+       </div>
     </body>
 </html>

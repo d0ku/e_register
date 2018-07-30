@@ -144,6 +144,9 @@ body {
 #made_by {
     font-family: $made_by_font;
     color:white;
+    position: absolute;
+    bottom: 0;
+    left: 0;
 }
 
 #description {
