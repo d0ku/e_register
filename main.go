@@ -11,7 +11,7 @@ import (
 func main() {
 	//read config.cfg, parse it and run server adequately
 	//TODO: when app is about to be deployed, that config line should be changed.
-	content, err := ioutil.ReadFile("config.cfg")
+	content, err := ioutil.ReadFile("config/config.cfg")
 	if err != nil {
 		panic(err)
 	}

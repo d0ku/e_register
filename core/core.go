@@ -303,7 +303,7 @@ func RunTLS(HTTPSport string, HTTPort string, redirectHTTPtoHTTPS bool, hostname
 	fmt.Println()
 	fmt.Println("Listen to me at: https://" + hostname + ":" + HTTPSport)
 
-	err := http.ListenAndServeTLS(":"+HTTPSport, "certs/server.crt", "certs/server.key", nil)
+	err := http.ListenAndServeTLS(":"+HTTPSport, serverCert, serverKey, nil)
 
 	//Something went wrong with starting HTTPS server.
 	if err != nil {
