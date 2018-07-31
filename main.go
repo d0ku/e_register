@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -13,8 +13,14 @@ import (
 
 func main() {
 	//read config.cfg, parse it and run server adequately
-	//TODO: when app is about to be deployed, that config line should be changed.
-	content, err := ioutil.ReadFile("config/config.cfg")
+
+	configPath := flag.String("configFilePath", "config/config.cfg", "Path to your config file.")
+
+	flag.Parse()
+
+	log.Print("Config file path:" + *configPath)
+
+	content, err := ioutil.ReadFile(*configPath)
 	if err != nil {
 		panic(err)
 	}
@@ -28,7 +34,7 @@ func main() {
 	config["cookie_life_time"] = "900"
 
 	for _, line := range lines {
-		fmt.Println(line)
+		log.Print(line)
 		lineElems := strings.Fields(line)
 		config[lineElems[0]] = lineElems[1]
 	}
@@ -40,8 +46,6 @@ func main() {
 	if val == "1" {
 		redirect = true
 	}
-
-	fmt.Println(config)
 
 	temp, err := strconv.Atoi(config["cookie_life_time"])
 	if err != nil {
