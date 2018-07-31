@@ -1,57 +1,21 @@
 @import 'base';
 
-
-#frame {
-    background-color: #062F4F;
-    display: inline-box;
-    width: 90%;
-    margin-left: 5%;
-    margin-right:5%;
-    padding: 10px;
-    margin-top: 15%;
-    opacity: 0.95;
-    display: grid;
-    grid-template-columns: auto;
+.frame {
+grid-template-columns: auto;
 
 
     @include computer {
-        margin-left: 25%;
-        width: 50%;
-        grid-template-columns:10% 60% 30%;
-        font-size:1.1em;
+       grid-template-columns:10% 60% 30%;
     }
 }
 
-body {
-    background-image: url("../images/registers.jpg");
-    background-size: 100% ;
-    background-repeat: no-repeat;
-    background-color: gray;
-}
-
-.about {
-    font-size: 1.2em;
-    font-family: $about_font;
-}
-
-.help {
-   font-family: $help_font; 
-}
-
 #description {
-    margin-top: 3%;
-    font-size: 1.7em;
-    color:white;
-
     @include computer {
         grid-column: 2;
     } 
 }
 
 #made_by {
-    font-family: $made_by_font;
-    color:white;
-
     @include computer {
         grid-column: 1;
         grid-row: 5;
@@ -59,21 +23,8 @@ body {
 }
 
 .loginButton {
-    align: center;
-    color: white;
+    @extend .button;
     display: grid-item;
-    width: auto;
-    padding: 30px;
-    margin: 8px;
-    display:block;
-    //float: right;
-    background-color: green;
-    margin-right: 10%;
-    border-radius: 7px;
-    background-color:gray;
-    text-align: center;
-    font-family: $button_font;
-    opacity: 1.0;
 
     @include computer {
         grid-column: 3;

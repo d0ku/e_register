@@ -10,11 +10,8 @@
     </head>
     <body>
         <div id="container">
-            <div id="frame">
-                <div id="made_by">
-                    By d0ku 2018
-                </div>
-                <div id="description">
+            <div class="frame">
+               <div id="description">
                     <span class="about">
                     Witamy na stronie E-dziennika Papirus! 
                     </span>
@@ -36,6 +33,9 @@
                     UCZEŃ
                 </a>
             </div>
+        </div>
+        <div id="made_by">
+            By d0ku 2018
         </div>
     </body>
 </html>

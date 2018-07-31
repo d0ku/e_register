@@ -1,0 +1,23 @@
+@import 'base';
+
+.frame {
+    text-align:center;
+    align:center;
+}
+
+.warning {
+    font-size: 1.4em;
+}
+
+#madeBy {
+    text-align:left;
+}
+
+.button {
+    background-color: $warning_background_color;
+    margin-left: auto;
+    margin-right: auto;
+    width: 8em;
+    color: black;
+    text-align: center;
+}

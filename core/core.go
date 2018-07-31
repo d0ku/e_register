@@ -1,6 +1,10 @@
 package core
 
-//TODO:	User has to perform action in specified amount of time, add counter on webpage. If he does not, javascript automatically logs him out and his session is deleted from both database and application cache.
+//TODO:	User has to perform action in specified amount of time, add counter of cookie lifetime on webpage.
+
+//User session life period is stored in cookie and removed after time ends.
+
+//All rs are checked for sessionID cookie when we get them, so there is no need to check for errors in getting that cookie in later rs.
 import (
 	"errors"
 	"fmt"
@@ -9,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/d0ku/database_project_go/core/databaseLayer"
@@ -26,9 +31,9 @@ type UserData struct {
 	IsLogged bool
 }
 
-func getUserDataFromRequest(response http.ResponseWriter, request *http.Request) (*UserData, error) {
+func getUserDataFromRequest(w http.ResponseWriter, r *http.Request) (*UserData, error) {
 	user := &UserData{}
-	cookie, err := request.Cookie("sessionID")
+	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		return user, errors.New("No cookie set")
 	}
@@ -39,7 +44,7 @@ func getUserDataFromRequest(response http.ResponseWriter, request *http.Request)
 		//Delete cookie which is notrecognized on server side.
 		return user, errors.New("That session does not exist")
 		cookie.Expires = time.Unix(0, 0)
-		http.SetCookie(response, cookie)
+		http.SetCookie(w, cookie)
 	}
 	user.UserName = session.Data["username"]
 	user.IsLogged = true
@@ -72,36 +77,22 @@ func parseAllTemplates(pageFolder string) {
 	fmt.Println("Finished parsing.")
 }
 
-func mainHandler(response http.ResponseWriter, request *http.Request) {
-	if request.Method == "GET" {
+func mainHandler(w http.ResponseWriter, r *http.Request) {
+	log.Print(r.Method)
+	if r.Method == "GET" {
+		user, err := getUserDataFromRequest(w, r)
 
-		user, err := getUserDataFromRequest(response, request)
-		//In theory we don't have to check whether username exists, as parsing template without arguments could just render unlogged site?
-
-		/*
-			if err != nil {
-				err := templates["index.gtpl"].Execute(response, nil)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				return
-			}
-		*/
-
-		err = templates["index.gtpl"].Execute(response, user)
+		err = templates["index.gtpl"].Execute(w, user)
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 
 	} else {
-		//POST
-		//call some functinos or do something
 	}
 }
 
-func logoutHandler(response http.ResponseWriter, request *http.Request) {
-	cookie, err := request.Cookie("sessionID")
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		log.Print("Try to log out not yet logged in user.")
 		//TODO: display something that user is not even logged in, or just ignore it and redirect to main.
@@ -110,138 +101,170 @@ func logoutHandler(response http.ResponseWriter, request *http.Request) {
 
 	//Delete cookie and redirect to main.
 	cookie.Expires = time.Unix(0, 0)
-	http.SetCookie(response, cookie)
+	http.SetCookie(w, cookie)
 	sessionManager.RemoveSession(cookie.Value)
 
-	http.Redirect(response, request, "/main", http.StatusSeeOther)
+	//TODO: display some info about successful log out?
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
-func loginUsers(response http.ResponseWriter, request *http.Request) {
-	regex := regexp.MustCompile("/[A-z]*$")
-	userType := regex.FindString(request.URL.EscapedPath())[1:]
+func loginUsers(w http.ResponseWriter, r *http.Request) {
+	fields := strings.Split(r.RequestURI, "/")
+	userType := fields[len(fields)-1]
+
 	//Execute template with correct value to be set as hidden attribute in HTML form.
-	err := templates["login_page.gtpl"].Execute(response, userType)
+	err := templates["login_page.gtpl"].Execute(w, userType)
 	if err != nil {
 		log.Print(err)
 	}
 }
 
-func loginHandler(response http.ResponseWriter, request *http.Request) {
+func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("sessionID")
+	if err != nil {
+		log.Print("Normal try to log in from: " + r.RemoteAddr)
+		//User is not logged in, cookie does not exist, normal use-case.
 
-	fmt.Println(request.Method)
-	if request.Method == "GET" {
-		//if logged in display personalized site, else display login site
-
-		cookie, err := request.Cookie("sessionID")
-		if err != nil {
-			//not logged in, cookie does not exist
-			err := templates["login.gtpl"].Execute(response, nil)
-			if err != nil {
-				log.Fatal(err)
-			}
-			return
-		}
-
-		session, err := sessionManager.GetSession(cookie.Value)
-
-		if err != nil {
-			log.Print("Client side thinks it is logged in, but it is not.")
-
-			//TODO: display something about that he has to relogin (probably redirect should be enough).
-			cookie.Expires = time.Unix(0, 0)
-			http.SetCookie(response, cookie)
-			http.Redirect(response, request, "/main", http.StatusSeeOther)
-			//user thinks he is logged in, but it is not true.
-			return
-
-		}
-
-		err = templates["login_personal.gtpl"].Execute(response, session.Data["username"])
+		err := templates["login.gtpl"].Execute(w, nil)
 		if err != nil {
 			log.Print(err)
 		}
 		return
+	}
 
-		//logged in
+	_, err = sessionManager.GetSession(cookie.Value)
 
-	} else {
-		request.ParseForm()
-		//Validate data, and check whether it can be used to log into database.
-		username := template.HTMLEscapeString(request.Form["username"][0])
-		password := template.HTMLEscapeString(request.Form["password"][0])
-		userType := template.HTMLEscapeString(request.Form["userType"][0])
-		fmt.Println(username)
-		fmt.Println(password)
+	if err != nil {
+		log.Print("Incorrect cookie on user side.")
+		//User tried to log in with expired cookie or he is trying to do something malicious.
 
-		var checkSchool bool
+		//Remove expired cookie from client side.
+		cookie.Expires = time.Unix(0, 0)
+		http.SetCookie(w, cookie)
 
-		if userType == "schoolAdmin" {
-			userType = "teacher"
-			checkSchool = true
-		}
-		//TODO: implement js on client-side that checks password length etc.
+		//Show user info that he is not logged in.
+		templates["not_logged.gtpl"].Execute(w, nil)
+		return
+	}
 
-		user := dbHandler.CheckUserLogin(username, password, userType)
+	//If logged user tries to access /login page, we redirect him to /main.
+	//BUG: [possible] Is this correct http status for such case?
 
-		if !user.Exists {
-			fmt.Println("User does not exist!")
+	http.Redirect(w, r, "/main", http.StatusSeeOther)
+}
 
-		} else {
+func loginHandlerDecorator(cookieLifeTime time.Duration) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			loginHandlerGET(w, r)
+		} else { //POST request.
+			r.ParseForm()
+			//Validate data, and check whether it can be used to log into database.
+			username := template.HTMLEscapeString(r.Form["username"][0])
+			password := template.HTMLEscapeString(r.Form["password"][0])
+			userType := template.HTMLEscapeString(r.Form["userType"][0])
 
-			if checkSchool {
-				schoolID := dbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
-				if schoolID == -1 {
-					//ERROR OUT!
-					fmt.Println("NO ADMIN!")
-					return
-				}
-				fmt.Println("YUP, ADMIN!")
+			//DEBUG
+			fmt.Println(username)
+			fmt.Println(password)
+			//END OF DEBUG
+
+			var checkSchool bool
+
+			if userType == "schoolAdmin" {
+				userType = "teacher"
+				checkSchool = true
 			}
-			fmt.Println("User logged in!")
-			//good password and username combination
 
-			//If we have stored sessionID for that user just send it back to him,
-			//else create new one.
+			user := dbHandler.CheckUserLogin(username, password, userType)
 
-			sessionID := sessionManager.GetSessionID(username)
-			cookie := &http.Cookie{Name: "sessionID", Value: sessionID, MaxAge: 0, Secure: true, HttpOnly: false}
-			log.Print("Successfull authentication: " + username)
-
-			/*
-				if err != nil {
-					//Data was found.
-					cookie.Value = sessionID
-					log.Print("Successful relogin: " + usernameBase.String)
-				} else {
-					sessionID := GenerateSessionID(32)
-					AddSession(sessionID, username)
-					cookie.Value = sessionID
-					log.Print("Successful log in: " + usernameBase.String)
+			if !user.Exists {
+				//TODO: implement timeouts dependind on number of tries from address.
+				log.Print("Unsuccessful try to log in from:" + r.RemoteAddr)
+			} else {
+				if checkSchool {
+					schoolID := dbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
+					if schoolID == -1 {
+						//There is no schoolAdmin with such id.
+						log.Print("Try to log in as admin (no permissions): " + username)
+					}
+					log.Print("Successful admin logon from:" + r.RemoteAddr)
 				}
-			*/
+				//TODO: Is that kind of logging neccessary?
+				log.Print("Logon as: " + username + " from " + r.RemoteAddr)
 
-			//Send cookie with sessionID to Client.
-			http.SetCookie(response, cookie)
+				//We always create new session for users who don't have valid cookies.
+				sessionID := sessionManager.GetSessionID(username)
 
-			http.Redirect(response, request, "/main", http.StatusSeeOther)
+				//Send cookie with defined expiration time and sessionID value to user.
+				cookie := &http.Cookie{Name: "sessionID", Value: sessionID, Expires: time.Now().Add(cookieLifeTime * time.Second), Secure: true, HttpOnly: false}
+
+				//Send cookie with sessionID to Client.
+				http.SetCookie(w, cookie)
+
+				//Redirect user to main.
+				//TODO: display some info about successfull login?
+				//TODO: is that correct http status?
+
+				http.Redirect(w, r, "/main", http.StatusSeeOther)
+			}
 		}
 	}
 }
 
-func deleteHandler(response http.ResponseWriter, request *http.Request) {
-	response.Write([]byte(request.URL.String()))
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(r.URL.String()))
 }
 
-func registerHandler(response http.ResponseWriter, request *http.Request) {
-	user, _ := getUserDataFromRequest(response, request)
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := getUserDataFromRequest(w, r)
 
 	//TODO: write register.gtpl, if user has adequate privileges, (add variable to User Structure) display adding users panel,
 	// else display you don't have privileges.
-	templates["register.gtpl"].Execute(response, user)
+	templates["register.gtpl"].Execute(w, user)
+}
+
+func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		host := r.Host
+		if i := strings.Index(host, ":"); i != -1 {
+			host = host[:i]
+		}
+		redirectAddress := "https://" + host + ":" + ports[0] + r.RequestURI
+
+		log.Print(redirectAddress)
+		http.Redirect(w, r, redirectAddress, http.StatusMovedPermanently)
+	})
+}
+
+func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("sessionID")
+
+		if err != nil {
+			log.Print(err)
+			templates["not_logged.gtpl"].Execute(w, nil)
+			return
+		}
+
+		_, ok := sessionManager.GetSession(cookie.Value)
+
+		if ok != nil {
+			log.Print("User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
+			templates["not_logged.gtpl"].Execute(w, nil)
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	}
+}
+
+func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //Initialize sets up connection with database, and assigns handlers.
-func Initialize(databaseUser string, databaseName string, templatesPath string) {
+func Initialize(databaseUser string, databaseName string, templatesPath string, cookieLifeTime time.Duration) {
 	//Initialize parsed templates.
 	parseAllTemplates(templatesPath)
 
@@ -259,22 +282,33 @@ func Initialize(databaseUser string, databaseName string, templatesPath string) 
 	//	sessionManager.ReadSessionsFromDatabase()
 
 	//TODO: some kind of login panel, where admin can add new users?
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/logout", logoutHandler)
-	http.HandleFunc("/delete", deleteHandler)
-	http.HandleFunc("/main", mainHandler)
-	http.HandleFunc("/register", registerHandler)
+
+	http.HandleFunc("/login", loginHandlerDecorator(cookieLifeTime))
+	http.HandleFunc("/logout", redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))
+	//http.HandleFunc("/delete", redirectWithErrorToLogin(deleteHandler))
+	http.HandleFunc("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
+	//	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login/", loginUsers)
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
 }
 
-//Run starts initialized server on specified port.
-func Run(port string) {
+//RunTLS starts initialized server on specified port with TLS.
+func RunTLS(HTTPSport string, HTTPort string, redirectHTTPtoHTTPS bool, hostname string, serverCert string, serverKey string) {
 	//Certificates are self signed, so they are not worth a penny, if this is supposed to go into production, certificates should be obtained from approppriate organisation.
-	fmt.Println()
-	fmt.Println("Listen to me at: https://localhost:" + port)
 
-	err := http.ListenAndServeTLS(":"+port, "certs/server.crt", "certs/server.key", nil)
+	if redirectHTTPtoHTTPS {
+		go func() {
+			err := http.ListenAndServe(":"+HTTPort, redirectToHTTPS(http.HandlerFunc(placeHolderHandler), HTTPSport))
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+	}
+
+	fmt.Println()
+	fmt.Println("Listen to me at: https://" + hostname + ":" + HTTPSport)
+
+	err := http.ListenAndServeTLS(":"+HTTPSport, serverCert, serverKey, nil)
 
 	//Something went wrong with starting HTTPS server.
 	if err != nil {
