@@ -1,11 +1,12 @@
 package sessions
 
 import (
+	"log"
 	"math"
 	"time"
 )
 
-//Is this memory safe to never purge addresses which didn't login successfully?
+// TODO: Is this memory safe to never purge addresses which didn't login successfully?
 
 //UserLoginTry is basic type that describes login try from an user.
 type UserLoginTry struct {
@@ -40,6 +41,8 @@ func (controller *LoginTriesController) setTimeout(origin string) {
 	} else if tries >= 5 {
 		addTime = time.Second * 10
 	}
+
+	log.Print(addTime.String() + " seconds of timeout for:" + origin)
 
 	controller.timeoutEnd[origin] = time.Now().Add(addTime)
 }
