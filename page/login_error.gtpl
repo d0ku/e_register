@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pl">
     <head>
-        <title>E-dziennik: Przekierowanie</title>
+        <title>E-dziennik: Błąd logowania</title>
         <meta charset="utf-8">
         <link rel="stylesheet" type="text/css" href="CSS/not_logged.css">
         <meta name="description" content= "Strona przekierowująca do logowania."> 
