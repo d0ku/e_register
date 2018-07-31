@@ -60,9 +60,9 @@ func parseAllTemplates(pageFolder string) {
 		if !templateFile.IsDir() {
 			name := templateFile.Name()
 
-			//BUG: this regex matches too much at the moment
 			regex := regexp.MustCompile("^.*\\.gtpl$")
 			//Parse only gtpl files at the moment (html templates).
+
 			if regex.MatchString(name) {
 				fmt.Println("---> " + pageFolder + name)
 				templates[name] = template.Must(template.ParseFiles(pageFolder + name))
@@ -88,11 +88,14 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("sessionID")
+	//Case where user is not logged in is not possible, because of checking for needed cookie before calling this function.
+	cookie, _ := r.Cookie("sessionID")
+
+	session, err := sessionManager.GetSession(cookie.Value)
 	if err != nil {
-		log.Print("Try to log out not yet logged in user.")
-		//TODO: display something that user is not even logged in, or just ignore it and redirect to main.
-		return
+		log.Print(err)
+	} else {
+		log.Print("Successfully logged out: " + session.Data["username"] + " from:" + r.RemoteAddr)
 	}
 
 	//Delete cookie and redirect to main.
@@ -100,7 +103,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 	sessionManager.RemoveSession(cookie.Value)
 
-	//TODO: display some info about successful log out?
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
