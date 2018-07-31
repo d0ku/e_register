@@ -25,31 +25,26 @@ var dbHandler *databaseLayer.DBHandler
 var sessionManager *sessions.SessionManager
 var templates map[string]*template.Template
 
-//UserData represents data used to fill in GO HTML templates.
-type UserData struct {
-	UserName string
-	IsLogged bool
-}
-
-func getUserDataFromRequest(w http.ResponseWriter, r *http.Request) (*UserData, error) {
-	user := &UserData{}
+//Gets session data from request and automatically handles:
+//- no cookie at all
+//- incorrect cookie
+//and deletes cookie from client side in that case.
+func getSessionFromRequest(w http.ResponseWriter, r *http.Request) (*sessions.Session, error) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
-		return user, errors.New("No cookie set")
+		return nil, errors.New("No cookie set")
 	}
 
 	session, err := sessionManager.GetSession(cookie.Value)
 
 	if err != nil {
-		//Delete cookie which is notrecognized on server side.
-		return user, errors.New("That session does not exist")
+		//Delete cookie which is not recognized on server side.
 		cookie.Expires = time.Unix(0, 0)
 		http.SetCookie(w, cookie)
+		return nil, errors.New("That session does not exist")
 	}
-	user.UserName = session.Data["username"]
-	user.IsLogged = true
 
-	return user, nil
+	return session, nil
 }
 
 func parseAllTemplates(pageFolder string) {
@@ -80,14 +75,15 @@ func parseAllTemplates(pageFolder string) {
 func mainHandler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method)
 	if r.Method == "GET" {
-		user, err := getUserDataFromRequest(w, r)
+		var err error
+		//We know that request has been checked previously so there is no need to check for error.
+		session, _ := getSessionFromRequest(w, r)
 
-		err = templates["index.gtpl"].Execute(w, user)
+		err = templates["index.gtpl"].Execute(w, session.Data["username"])
 		if err != nil {
 			log.Print(err)
 		}
 
-	} else {
 	}
 }
 
@@ -181,6 +177,11 @@ func loginHandlerDecorator(cookieLifeTime time.Duration) func(http.ResponseWrite
 			if !user.Exists {
 				//TODO: implement timeouts dependind on number of tries from address.
 				log.Print("Unsuccessful try to log in from:" + r.RemoteAddr)
+				if checkSchool {
+					templates["login_error.gtpl"].Execute(w, "schoolAdmin")
+				} else {
+					templates["login_error.gtpl"].Execute(w, userType)
+				}
 			} else {
 				if checkSchool {
 					schoolID := dbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
@@ -214,14 +215,6 @@ func loginHandlerDecorator(cookieLifeTime time.Duration) func(http.ResponseWrite
 
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(r.URL.String()))
-}
-
-func registerHandler(w http.ResponseWriter, r *http.Request) {
-	user, _ := getUserDataFromRequest(w, r)
-
-	//TODO: write register.gtpl, if user has adequate privileges, (add variable to User Structure) display adding users panel,
-	// else display you don't have privileges.
-	templates["register.gtpl"].Execute(w, user)
 }
 
 func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
