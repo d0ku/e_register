@@ -5,7 +5,7 @@ sass_files:
 	sass not_logged.scss not_logged.css
 
 clean:
-	rm -rf *.css
-	rm -rf *.css.map
-	rm -rf *~
-	rm -rf .sass-cache
+	-rm -rf *.css
+	-rm -rf *.css.map
+	-rm -rf *~
+	-rm -rf .sass-cache

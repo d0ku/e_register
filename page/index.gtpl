@@ -6,12 +6,7 @@
     </head>
     <body>
         <h1 class="warning"> TEST </h1>
-        {{ if .IsLogged }}
-        Witamy na stronie domowej szanowny panie {{ .UserName }}!
+        Witamy na stronie domowej {{ . }}!
         <a href="/logout">Log Out</a>
-        {{ else }}
-        Witamy na stronie domowej!
-        <a href="/login">Log In</a>
-        {{ end }}
     </body>
 </html>

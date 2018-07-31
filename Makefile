@@ -11,7 +11,7 @@ css:
 	cd page/CSS && make
 
 clean:
-	rm *~
+	-rm *~
 	cd page/CSS && make clean
 
 tests:
