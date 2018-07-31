@@ -15,9 +15,13 @@
                     Wprowadzona nazwa użytkownika i hasło nie pasują do żadnego użytkownika.
                 </span>
                 <span class="help">
+                    {{ if .HasTimeout}}
+                    Z powodu wielu prób logowania następna próba może nastąpić dopiero za {{ .Timeout }} sekund.
+                    {{ else }} 
                     Kliknij na przycisk, aby spróbować ponownie.
+                    {{ end }}
                 </span>
-                <a class="button" href="/login/{{ . }}">PRZEKIERUJ</a>
+                <a class="button" href="/login/{{ .UserType }}">PRZEKIERUJ</a>
             </div>
        </div>
        <div id="made_by">
