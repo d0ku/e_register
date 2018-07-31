@@ -78,30 +78,16 @@ func parseAllTemplates(pageFolder string) {
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
+	log.Print(r.Method)
 	if r.Method == "GET" {
-
 		user, err := getUserDataFromRequest(w, r)
-		//In theory we don't have to check whether username exists, as parsing template without arguments could just render unlogged site?
-
-		/*
-			if err != nil {
-				err := templates["index.gtpl"].Execute(w, nil)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				return
-			}
-		*/
 
 		err = templates["index.gtpl"].Execute(w, user)
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 
 	} else {
-		//POST
-		//call some functinos or do something
 	}
 }
 
@@ -118,7 +104,8 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 	sessionManager.RemoveSession(cookie.Value)
 
-	http.Redirect(w, r, "/main", http.StatusFound)
+	//TODO: display some info about successful log out?
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 func loginUsers(w http.ResponseWriter, r *http.Request) {
@@ -132,45 +119,44 @@ func loginUsers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("sessionID")
+	if err != nil {
+		log.Print("Normal try to log in from: " + r.RemoteAddr)
+		//User is not logged in, cookie does not exist, normal use-case.
+
+		err := templates["login.gtpl"].Execute(w, nil)
+		if err != nil {
+			log.Print(err)
+		}
+		return
+	}
+
+	_, err = sessionManager.GetSession(cookie.Value)
+
+	if err != nil {
+		log.Print("Incorrect cookie on user side.")
+		//User tried to log in with expired cookie or he is trying to do something malicious.
+
+		//Remove expired cookie from client side.
+		cookie.Expires = time.Unix(0, 0)
+		http.SetCookie(w, cookie)
+
+		//Show user info that he is not logged in.
+		templates["not_logged.gtpl"].Execute(w, nil)
+		return
+	}
+
+	//If logged user tries to access /login page, we redirect him to /main.
+	//BUG: [possible] Is this correct http status for such case?
+
+	http.Redirect(w, r, "/main", http.StatusSeeOther)
+}
+
 func loginHandlerDecorator(cookieLifeTime time.Duration) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
-			cookie, err := r.Cookie("sessionID")
-			if err != nil {
-				log.Print("Normal try to log in from: " + r.RemoteAddr)
-				//User is not logged in, cookie does not exist, normal use-case.
-
-				err := templates["login.gtpl"].Execute(w, nil)
-				if err != nil {
-					log.Print(err)
-				}
-				return
-			}
-
-			session, err := sessionManager.GetSession(cookie.Value)
-
-			if err != nil {
-				log.Print("Incorrect cookie on user side.")
-				//User tried to log in with expired cookie or he is trying to do something malicious.
-
-				//Remove expired cookie from client side.
-				cookie.Expires = time.Unix(0, 0)
-				http.SetCookie(w, cookie)
-
-				//Show user info that he is not logged in.
-				templates["not_logged.gtpl"].Execute(w, nil)
-				return
-			}
-
-			//If logged user tries to access /login page, we redirect him to /main.
-			//BUG: [possible] Is this correct http status for such case?
-
-			http.Redirect(w, r, "/main", http.StatusFound)
-			err = templates["login_personal.gtpl"].Execute(w, session.Data["username"])
-			if err != nil {
-				log.Print(err)
-			}
-
+			loginHandlerGET(w, r)
 		} else { //POST request.
 			r.ParseForm()
 			//Validate data, and check whether it can be used to log into database.
@@ -252,7 +238,7 @@ func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 	})
 }
 
-func redirectWithErrorToLogin(h func(http.ResponseWriter, *http.Request), messagePorts ...string) func(http.ResponseWriter, *http.Request) {
+func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("sessionID")
 
@@ -267,7 +253,10 @@ func redirectWithErrorToLogin(h func(http.ResponseWriter, *http.Request), messag
 		if ok != nil {
 			log.Print("User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
 			templates["not_logged.gtpl"].Execute(w, nil)
+			return
 		}
+
+		h.ServeHTTP(w, r)
 	}
 }
 
@@ -295,9 +284,9 @@ func Initialize(databaseUser string, databaseName string, templatesPath string, 
 	//TODO: some kind of login panel, where admin can add new users?
 
 	http.HandleFunc("/login", loginHandlerDecorator(cookieLifeTime))
-	http.HandleFunc("/logout", redirectWithErrorToLogin(logoutHandler))
+	http.HandleFunc("/logout", redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))
 	//http.HandleFunc("/delete", redirectWithErrorToLogin(deleteHandler))
-	http.HandleFunc("/main", redirectWithErrorToLogin(mainHandler))
+	http.HandleFunc("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
 	//	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login/", loginUsers)
 	http.Handle("/", http.FileServer(http.Dir("./page/")))
