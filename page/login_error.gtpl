@@ -6,7 +6,7 @@
         <link rel="stylesheet" type="text/css" href="CSS/not_logged.css">
         <meta name="description" content= "Strona przekierowująca do logowania."> 
         <meta name="viewport"  content= "width=device-width, initial-scale=1.0"/> 
-        <link href="https://fonts.googleapis.com/css?family=Lato|Merriweather|Roboto|Yellowtail" rel="stylesheet"> 
+        <link href="https://fonts.googleapis.com/css?family=Lato|Merriweather|Roboto|Yellowtail" rel="stylesheet">
     </head>
     <body>
         <div id="container">
@@ -14,18 +14,23 @@
                 <span class="warning">
                     Wprowadzona nazwa użytkownika i hasło nie pasują do żadnego użytkownika.
                 </span>
-                <span class="help">
+                <div class="help">
                     {{ if .HasTimeout}}
-                    Z powodu wielu prób logowania następna próba może nastąpić dopiero za {{ .Timeout }} sekund.
+                    <div id="timeoutInfo">
+                        Z powodu wielu prób logowania następna próba może nastąpić dopiero za 
+                        <span id="timeoutCounter">{{ .Timeout }}</span> sek.
+                    </div>
                     {{ else }} 
                     Kliknij na przycisk, aby spróbować ponownie.
                     {{ end }}
-                </span>
-                <a class="button" href="/login/{{ .UserType }}">PRZEKIERUJ</a>
+                </div>
+                <a id="try_again_button" class="button" href="/login/{{ .UserType }}">Spróbuj ponownie</a>
             </div>
        </div>
        <div id="made_by">
            By d0ku 2018
        </div>
+       <!-- Call js script to run timer down. -->
+       <script src="js/timeoutCounter.js"></script>
     </body>
 </html>
