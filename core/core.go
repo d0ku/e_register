@@ -284,6 +284,10 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) func(http.
 func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
+func redirectToLogin(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/login", http.StatusMovedPermanently)
+}
+
 //Initialize sets up connection with database, and assigns handlers.
 func Initialize(databaseUser string, databaseName string, templatesPath string, cookieLifeTime time.Duration) {
 	//Initialize parsed templates.
@@ -312,7 +316,8 @@ func Initialize(databaseUser string, databaseName string, templatesPath string, 
 	http.HandleFunc("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
 	//	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login/", loginUsers)
-	http.Handle("/", http.FileServer(http.Dir("./page/server_root/")))
+	http.HandleFunc("/", redirectToLogin)
+	http.Handle("/page/", http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/"))))
 }
 
 //RunTLS starts initialized server on specified port with TLS.
