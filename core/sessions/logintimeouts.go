@@ -90,7 +90,7 @@ func (controller *LoginTriesController) GetTimeoutLeft(origin string) int {
 	}
 
 	//Return time left.
-	timeLeft := int(math.Round(timeout.Sub(time.Now()).Seconds()))
+	timeLeft := int(math.Floor(timeout.Sub(time.Now()).Seconds()))
 	if timeLeft == 0 {
 		delete(controller.timeoutEnd, origin)
 		return 0
