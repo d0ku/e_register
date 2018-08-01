@@ -73,7 +73,6 @@ func parseAllTemplates(pageFolder string) {
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
-	log.Print(r.Method)
 	if r.Method == "GET" {
 		var err error
 		//We know that request has been checked previously so there is no need to check for error.
@@ -83,7 +82,6 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Print(err)
 		}
-
 	}
 }
 
@@ -95,7 +93,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 	} else {
-		log.Print("Successfully logged out: " + session.Data["username"] + " from:" + r.RemoteAddr)
+		log.Print("LOGIN|Successfully logged out: " + session.Data["username"] + " from:" + r.RemoteAddr)
 	}
 
 	//Delete cookie and redirect to main.
@@ -120,7 +118,7 @@ func loginUsers(w http.ResponseWriter, r *http.Request) {
 func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
-		log.Print("Normal try to log in from: " + r.RemoteAddr)
+		log.Print("LOGIN|Normal try to log in from: " + r.RemoteAddr)
 		//User is not logged in, cookie does not exist, normal use-case.
 
 		err := templates["login.gtpl"].Execute(w, nil)
@@ -133,7 +131,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 	_, err = sessionManager.GetSession(cookie.Value)
 
 	if err != nil {
-		log.Print("Incorrect cookie on user side.")
+		log.Print("LOGIN|Incorrect cookie on user side.")
 		//User tried to log in with expired cookie or he is trying to do something malicious.
 
 		//Remove expired cookie from client side.
@@ -187,7 +185,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				}
 
 				//TODO: add javascript count down in template file, so user could see when his timeout is done.
-				log.Print("Unsuccessful try to log in from:" + r.RemoteAddr)
+				log.Print("LOGIN|Unsuccessful try to log in from:" + r.RemoteAddr)
 				err := templates["login_error.gtpl"].Execute(w, userLoginTry)
 				if err != nil {
 					log.Print(err)
@@ -213,14 +211,14 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 							log.Print(err)
 						}
 
-						log.Print("Unsuccessful try to log in as admin (no permissions) from:" + username)
+						log.Print("LOGIN|Unsuccessful try to log in as admin (no permissions) from:" + username)
 						return
 					}
-					log.Print("Successful admin logon from:" + r.RemoteAddr)
+					log.Print("LOGIN|Successful admin logon from:" + r.RemoteAddr)
 				}
 				loginTriesController.ResetTries(r.RemoteAddr)
 				//TODO: Is that kind of logging neccessary? GDPR compliance and so on?
-				log.Print("Logon as: " + username + " from:" + r.RemoteAddr)
+				log.Print("LOGIN|Logon as: " + username + " from:" + r.RemoteAddr)
 
 				//We always create new session for users who don't have valid cookies.
 				sessionID := sessionManager.GetSessionID(username)
@@ -254,7 +252,7 @@ func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 		}
 		redirectAddress := "https://" + host + ":" + ports[0] + r.RequestURI
 
-		log.Print(redirectAddress)
+		log.Print("HTTPS REDIRECT|Redirected " + r.RemoteAddr + " to " + redirectAddress)
 		http.Redirect(w, r, redirectAddress, http.StatusMovedPermanently)
 	})
 }
@@ -272,7 +270,7 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) func(http.
 		_, ok := sessionManager.GetSession(cookie.Value)
 
 		if ok != nil {
-			log.Print("User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
+			log.Print("LOGIN|User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
 			templates["not_logged.gtpl"].Execute(w, nil)
 			return
 		}
