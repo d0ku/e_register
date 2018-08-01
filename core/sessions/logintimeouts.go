@@ -3,6 +3,7 @@ package sessions
 import (
 	"log"
 	"math"
+	"sort"
 	"time"
 )
 
@@ -18,28 +19,45 @@ type UserLoginTry struct {
 
 //LoginTriesController enables application to easily control how many times user tried to log in and give him specific timeouts.
 type LoginTriesController struct {
-	tries      map[string]int
-	timeoutEnd map[string]time.Time
+	tries         map[string]int
+	timeoutEnd    map[string]time.Time
+	TimeoutPolicy []*TimeoutObj
+}
+
+//TimeoutObj represents one rule from timeoutPolicy.
+type TimeoutObj struct {
+	HowManytries     int
+	HowLongInSeconds int
 }
 
 //GetLoginTriesController returns pointer to initalized controller.
 func GetLoginTriesController() *LoginTriesController {
-	return &LoginTriesController{make(map[string]int), make(map[string]time.Time)}
+	defaultTimeoutPolicy := []*TimeoutObj{
+		&TimeoutObj{100, 30},
+		&TimeoutObj{50, 20},
+		&TimeoutObj{10, 15},
+		&TimeoutObj{5, 10},
+	}
+	return &LoginTriesController{make(map[string]int), make(map[string]time.Time), defaultTimeoutPolicy}
+}
+
+//SpecifyTimeoutPolicy makes it very easy to use your own rules for timeout.
+//User has to provide slice with rules defined as TimeoutObj objects.
+//Function sorts that slice and uses it accordingly.
+func (controller *LoginTriesController) SpecifyTimeoutPolicy(policy []*TimeoutObj) {
+	sort.Slice(policy, func(i, j int) bool { return policy[i].HowManytries > policy[j].HowManytries })
+	controller.TimeoutPolicy = policy
 }
 
 func (controller *LoginTriesController) setTimeout(origin string) {
 	var addTime time.Duration
 	tries := controller.tries[origin]
 
-	//TODO: define better policy for timeouts.
-	if tries >= 100 {
-		addTime = time.Second * 30
-	} else if tries >= 50 {
-		addTime = time.Second * 20
-	} else if tries >= 10 {
-		addTime = time.Second * 15
-	} else if tries >= 5 {
-		addTime = time.Second * 10
+	for _, value := range controller.TimeoutPolicy {
+		if tries >= value.HowManytries {
+			addTime = time.Second * time.Duration(value.HowLongInSeconds)
+			break
+		}
 	}
 
 	log.Print(addTime.String() + " seconds of timeout for:" + origin)
@@ -51,7 +69,7 @@ func (controller *LoginTriesController) setTimeout(origin string) {
 func (controller *LoginTriesController) AddTry(origin string) {
 	_, ok := controller.timeoutEnd[origin]
 	if ok {
-		//Don't do anything if there is a timeout already.
+		//Don't do anything if there is a timeout already. That request won't be supported anyway.
 		return
 	}
 	_, ok = controller.tries[origin]
@@ -62,7 +80,7 @@ func (controller *LoginTriesController) AddTry(origin string) {
 
 	controller.tries[origin]++
 
-	if controller.tries[origin] >= 5 {
+	if controller.tries[origin] >= controller.TimeoutPolicy[len(controller.TimeoutPolicy)-1].HowManytries {
 		controller.setTimeout(origin)
 	}
 }
@@ -83,18 +101,14 @@ func (controller *LoginTriesController) GetTimeoutLeft(origin string) int {
 		return 0
 	}
 
-	if time.Now().After(timeout) {
+	currentTime := time.Now()
+	if currentTime.After(timeout) {
 		//Timeout already passed, can be deleted.
 		delete(controller.timeoutEnd, origin)
 		return 0
 	}
 
 	//Return time left.
-	timeLeft := int(math.Floor(timeout.Sub(time.Now()).Seconds()))
-	if timeLeft == 0 {
-		delete(controller.timeoutEnd, origin)
-		return 0
-	}
-
+	timeLeft := int(math.Ceil(timeout.Sub(currentTime).Seconds()))
 	return timeLeft
 }
