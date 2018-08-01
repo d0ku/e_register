@@ -111,7 +111,7 @@ func loginUsers(w http.ResponseWriter, r *http.Request) {
 	userType := fields[len(fields)-1]
 
 	//Execute template with correct value to be set as hidden attribute in HTML form.
-	err := templates["login_page.gtpl"].Execute(w, userType)
+	err := templates["login_form.gtpl"].Execute(w, userType)
 	if err != nil {
 		log.Print(err)
 	}
