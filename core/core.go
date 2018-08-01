@@ -307,7 +307,7 @@ func logRequests(handler http.Handler) http.Handler {
 		log.Print("REQ|" + r.RemoteAddr + "|" + r.Method + "|" + r.URL.String())
 
 		responseWriter := getLoggingResponseWriter(w)
-		handler.ServeHTTP(w, r)
+		handler.ServeHTTP(responseWriter, r)
 
 		status := responseWriter.statusCode
 		log.Print("RES|" + strconv.Itoa(status) + "|" + http.StatusText(status))
