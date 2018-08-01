@@ -312,7 +312,7 @@ func Initialize(databaseUser string, databaseName string, templatesPath string, 
 	http.HandleFunc("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
 	//	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login/", loginUsers)
-	http.Handle("/", http.FileServer(http.Dir("./page/")))
+	http.Handle("/", http.FileServer(http.Dir("./page/server_root/")))
 }
 
 //RunTLS starts initialized server on specified port with TLS.

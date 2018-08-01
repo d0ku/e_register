@@ -8,11 +8,11 @@ sql:
 	#TODO
 
 css:
-	cd page/CSS && make
+	cd page/SASS/ && make
 
 clean:
 	-rm *~
-	cd page/CSS && make clean
+	cd page/SASS/ && make clean
 
 tests:
 	go test ./...
