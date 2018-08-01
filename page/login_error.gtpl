@@ -3,7 +3,7 @@
     <head>
         <title>E-dziennik: Błąd logowania</title>
         <meta charset="utf-8">
-        <link rel="stylesheet" type="text/css" href="CSS/not_logged.css">
+        <link rel="stylesheet" type="text/css" href="/page/CSS/not_logged.css">
         <meta name="description" content= "Strona przekierowująca do logowania."> 
         <meta name="viewport"  content= "width=device-width, initial-scale=1.0"/> 
         <link href="https://fonts.googleapis.com/css?family=Lato|Merriweather|Roboto|Yellowtail" rel="stylesheet">
@@ -31,6 +31,6 @@
            By d0ku 2018
        </div>
        <!-- Call js script to run timer down. -->
-       <script src="js/timeoutCounter.js"></script>
+       <script src="/page/js/timeoutCounter.js"></script>
     </body>
 </html>

@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,7 +74,6 @@ func parseAllTemplates(pageFolder string) {
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
-	log.Print(r.Method)
 	if r.Method == "GET" {
 		var err error
 		//We know that request has been checked previously so there is no need to check for error.
@@ -83,7 +83,6 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Print(err)
 		}
-
 	}
 }
 
@@ -95,7 +94,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 	} else {
-		log.Print("Successfully logged out: " + session.Data["username"] + " from:" + r.RemoteAddr)
+		log.Print("LOGIN|Successfully logged out: " + session.Data["username"] + " from:" + r.RemoteAddr)
 	}
 
 	//Delete cookie and redirect to main.
@@ -120,7 +119,7 @@ func loginUsers(w http.ResponseWriter, r *http.Request) {
 func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
-		log.Print("Normal try to log in from: " + r.RemoteAddr)
+		//log.Print("LOGIN|Normal try to log in from: " + r.RemoteAddr)
 		//User is not logged in, cookie does not exist, normal use-case.
 
 		err := templates["login.gtpl"].Execute(w, nil)
@@ -133,7 +132,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 	_, err = sessionManager.GetSession(cookie.Value)
 
 	if err != nil {
-		log.Print("Incorrect cookie on user side.")
+		log.Print("LOGIN|Incorrect cookie on user side.")
 		//User tried to log in with expired cookie or he is trying to do something malicious.
 
 		//Remove expired cookie from client side.
@@ -187,7 +186,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				}
 
 				//TODO: add javascript count down in template file, so user could see when his timeout is done.
-				log.Print("Unsuccessful try to log in from:" + r.RemoteAddr)
+				log.Print("LOGIN|Unsuccessful try to log in from:" + r.RemoteAddr)
 				err := templates["login_error.gtpl"].Execute(w, userLoginTry)
 				if err != nil {
 					log.Print(err)
@@ -213,14 +212,14 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 							log.Print(err)
 						}
 
-						log.Print("Unsuccessful try to log in as admin (no permissions) from:" + username)
+						log.Print("LOGIN|Unsuccessful try to log in as admin (no permissions) from:" + username)
 						return
 					}
-					log.Print("Successful admin logon from:" + r.RemoteAddr)
+					log.Print("LOGIN|Successful admin logon from:" + r.RemoteAddr)
 				}
 				loginTriesController.ResetTries(r.RemoteAddr)
 				//TODO: Is that kind of logging neccessary? GDPR compliance and so on?
-				log.Print("Logon as: " + username + " from:" + r.RemoteAddr)
+				log.Print("LOGIN|Logon as: " + username + " from:" + r.RemoteAddr)
 
 				//We always create new session for users who don't have valid cookies.
 				sessionID := sessionManager.GetSessionID(username)
@@ -254,7 +253,7 @@ func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 		}
 		redirectAddress := "https://" + host + ":" + ports[0] + r.RequestURI
 
-		log.Print(redirectAddress)
+		log.Print("HTTPS REDIRECT|Redirected " + r.RemoteAddr + " to " + redirectAddress)
 		http.Redirect(w, r, redirectAddress, http.StatusMovedPermanently)
 	})
 }
@@ -272,7 +271,7 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) func(http.
 		_, ok := sessionManager.GetSession(cookie.Value)
 
 		if ok != nil {
-			log.Print("User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
+			log.Print("LOGIN|User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
 			templates["not_logged.gtpl"].Execute(w, nil)
 			return
 		}
@@ -282,6 +281,37 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) func(http.
 }
 
 func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
+}
+
+func redirectToLogin(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/login", http.StatusMovedPermanently)
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func getLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+	return &loggingResponseWriter{w, http.StatusOK}
+}
+
+func (writer *loggingResponseWriter) WriteHeader(code int) {
+	writer.statusCode = code
+	writer.ResponseWriter.WriteHeader(code)
+}
+
+func logRequests(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		log.Print("REQ|" + r.RemoteAddr + "|" + r.Method + "|" + r.URL.String())
+
+		responseWriter := getLoggingResponseWriter(w)
+		handler.ServeHTTP(responseWriter, r)
+
+		status := responseWriter.statusCode
+		log.Print("RES|" + strconv.Itoa(status) + "|" + http.StatusText(status))
+	})
 }
 
 //Initialize sets up connection with database, and assigns handlers.
@@ -306,13 +336,16 @@ func Initialize(databaseUser string, databaseName string, templatesPath string, 
 
 	loginController := sessions.GetLoginTriesController()
 
-	http.HandleFunc("/login", loginHandlerDecorator(cookieLifeTime, loginController))
-	http.HandleFunc("/logout", redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))
+	//TODO: well that routing deserves some cleanup, does'nt it?
+
+	http.Handle("/login", logRequests(http.HandlerFunc(loginHandlerDecorator(cookieLifeTime, loginController))))
+	http.Handle("/logout", logRequests(http.HandlerFunc(redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))))
 	//http.HandleFunc("/delete", redirectWithErrorToLogin(deleteHandler))
-	http.HandleFunc("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
+	http.Handle("/main", logRequests(http.HandlerFunc(redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))))
 	//	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/login/", loginUsers)
-	http.Handle("/", http.FileServer(http.Dir("./page/server_root/")))
+	http.Handle("/login/", logRequests(http.HandlerFunc(loginUsers)))
+	http.Handle("/", logRequests(http.HandlerFunc(redirectToLogin)))
+	http.Handle("/page/", logRequests(http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))))
 }
 
 //RunTLS starts initialized server on specified port with TLS.
