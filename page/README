@@ -1,0 +1,2 @@
+server_root should contain only production assets.
+no code, no notes etc. should ever be in server_root folder
