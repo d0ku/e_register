@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,7 +119,7 @@ func loginUsers(w http.ResponseWriter, r *http.Request) {
 func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
-		log.Print("LOGIN|Normal try to log in from: " + r.RemoteAddr)
+		//log.Print("LOGIN|Normal try to log in from: " + r.RemoteAddr)
 		//User is not logged in, cookie does not exist, normal use-case.
 
 		err := templates["login.gtpl"].Execute(w, nil)
@@ -286,6 +287,33 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusMovedPermanently)
 }
 
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func getLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+	return &loggingResponseWriter{w, http.StatusOK}
+}
+
+func (writer *loggingResponseWriter) WriteHeader(code int) {
+	writer.statusCode = code
+	writer.ResponseWriter.WriteHeader(code)
+}
+
+func logRequests(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		log.Print("REQ|" + r.RemoteAddr + "|" + r.Method + "|" + r.URL.String())
+
+		responseWriter := getLoggingResponseWriter(w)
+		handler.ServeHTTP(w, r)
+
+		status := responseWriter.statusCode
+		log.Print("RES|" + strconv.Itoa(status) + "|" + http.StatusText(status))
+	})
+}
+
 //Initialize sets up connection with database, and assigns handlers.
 func Initialize(databaseUser string, databaseName string, templatesPath string, cookieLifeTime time.Duration) {
 	//Initialize parsed templates.
@@ -308,14 +336,16 @@ func Initialize(databaseUser string, databaseName string, templatesPath string, 
 
 	loginController := sessions.GetLoginTriesController()
 
-	http.HandleFunc("/login", loginHandlerDecorator(cookieLifeTime, loginController))
-	http.HandleFunc("/logout", redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))
+	//TODO: well that routing deserves some cleanup, does'nt it?
+
+	http.Handle("/login", logRequests(http.HandlerFunc(loginHandlerDecorator(cookieLifeTime, loginController))))
+	http.Handle("/logout", logRequests(http.HandlerFunc(redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))))
 	//http.HandleFunc("/delete", redirectWithErrorToLogin(deleteHandler))
-	http.HandleFunc("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
+	http.Handle("/main", logRequests(http.HandlerFunc(redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))))
 	//	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/login/", loginUsers)
-	http.HandleFunc("/", redirectToLogin)
-	http.Handle("/page/", http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/"))))
+	http.Handle("/login/", logRequests(http.HandlerFunc(loginUsers)))
+	http.Handle("/", logRequests(http.HandlerFunc(redirectToLogin)))
+	http.Handle("/page/", logRequests(http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))))
 }
 
 //RunTLS starts initialized server on specified port with TLS.
