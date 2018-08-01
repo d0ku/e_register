@@ -54,17 +54,6 @@ func GetSessionManager(sessionIDLength int, lifePeriod time.Duration) *SessionMa
 	return manager
 }
 
-//IsLoggedIn returns true if such sessionID is stored and false otherwise.
-func (manager *SessionManager) IsLoggedIn(sessionID string) bool {
-	//If such sessionID exists return true, false otherwise.
-	_, ok := manager.sessionsToUsers[sessionID]
-	if ok {
-		return true
-	}
-
-	return false
-}
-
 //GetSessionID returns unique sessionID for provided username.
 func (manager *SessionManager) GetSessionID(username string) string {
 	generateSessionID := func(length int) string {
