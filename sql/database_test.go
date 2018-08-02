@@ -2,14 +2,13 @@ package sql_test
 
 import (
 	"database/sql"
-	"os"
-	"testing"
 
 	_ "github.com/lib/pq"
 )
 
 var dbConnection *sql.DB
 
+/*
 func TestUserAdding(t *testing.T) {
 	var returnValue bool
 	commands := [...]string{
@@ -22,7 +21,6 @@ func TestUserAdding(t *testing.T) {
 		false,
 	}
 	for index, command := range commands {
-
 		dbConnection.QueryRow(command).Scan(&returnValue)
 		if returnValue != returnValues[index] {
 			t.Errorf(command)
@@ -42,3 +40,4 @@ func TestMain(m *testing.M) {
 
 	os.Exit(m.Run())
 }
+*/
