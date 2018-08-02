@@ -1,4 +1,4 @@
-package core
+package handlers
 
 //TODO:	User has to perform action in specified amount of time, add counter of cookie lifetime on webpage.
 
@@ -7,17 +7,16 @@ package core
 //All rs are checked for sessionID cookie when we get them, so there is no need to check for errors in getting that cookie in later rs.
 import (
 	"errors"
-	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/d0ku/e_register/core/databasehandling"
+	"github.com/d0ku/e_register/core/logging"
 	"github.com/d0ku/e_register/core/sessions"
 )
 
@@ -54,7 +53,7 @@ func parseAllTemplates(pageFolder string) {
 		panic(err)
 	}
 
-	log.Print("Parsing templates: ")
+	log.Print("TEMPLATES|Parsing started...")
 	for _, templateFile := range templateFiles {
 		if !templateFile.IsDir() {
 			name := templateFile.Name()
@@ -63,12 +62,12 @@ func parseAllTemplates(pageFolder string) {
 			//Parse only gtpl files at the moment (html templates).
 
 			if regex.MatchString(name) {
-				log.Print("---> " + pageFolder + name)
+				log.Print("TEMPLATES|Parsing ---> " + pageFolder + name)
 				templates[name] = template.Must(template.ParseFiles(pageFolder + name))
 			}
 		}
 	}
-	log.Print("Finished parsing.")
+	log.Print("TEMPLATES|Parsing finished...")
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
@@ -232,20 +231,6 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 	})
 }
 
-func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		host := r.Host
-		if i := strings.Index(host, ":"); i != -1 {
-			host = host[:i]
-		}
-		redirectAddress := "https://" + host + ":" + ports[0] + r.RequestURI
-
-		log.Print("HTTPS REDIRECT|Redirected " + r.RemoteAddr + " to " + redirectAddress)
-		http.Redirect(w, r, redirectAddress, http.StatusMovedPermanently)
-	})
-}
-
 func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("sessionID")
@@ -268,38 +253,8 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handl
 	})
 }
 
-func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
-}
-
 func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusMovedPermanently)
-}
-
-type loggingResponseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func getLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
-	return &loggingResponseWriter{w, http.StatusOK}
-}
-
-func (writer *loggingResponseWriter) WriteHeader(code int) {
-	writer.statusCode = code
-	writer.ResponseWriter.WriteHeader(code)
-}
-
-func logRequests(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		log.Print("REQ|" + r.RemoteAddr + "|" + r.Method + "|" + r.URL.String())
-
-		responseWriter := getLoggingResponseWriter(w)
-		handler.ServeHTTP(responseWriter, r)
-
-		status := responseWriter.statusCode
-		log.Print("RES|" + strconv.Itoa(status) + "|" + http.StatusText(status))
-	})
 }
 
 //Initialize sets up connection with database, and assigns handlers.
@@ -315,34 +270,10 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration) {
 
 	fileServer := http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))
 
-	http.Handle("/login", logRequests(loginHandlerDecorator(cookieLifeTime, loginController)))
-	http.Handle("/logout", logRequests(redirectWithErrorToLogin(http.HandlerFunc(logoutHandler))))
-	http.Handle("/main", logRequests(redirectWithErrorToLogin(http.HandlerFunc(mainHandler))))
-	http.Handle("/login/", logRequests(http.HandlerFunc(loginUsers)))
-	http.Handle("/", logRequests(http.HandlerFunc(redirectToLogin)))
-	http.Handle("/page/", logRequests(fileServer))
-}
-
-//RunTLS starts initialized server on specified port with TLS.
-func RunTLS(HTTPSport string, HTTPort string, redirectHTTPtoHTTPS bool, hostname string, serverCert string, serverKey string) {
-
-	//Redirect HTTP trafic to HTTPS port with changed protocol if such option was specified.
-	if redirectHTTPtoHTTPS {
-		go func() {
-			err := http.ListenAndServe(":"+HTTPort, redirectToHTTPS(http.HandlerFunc(placeHolderHandler), HTTPSport))
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
-	}
-
-	fmt.Println()
-	fmt.Println("Listen to me at: https://" + hostname + ":" + HTTPSport)
-
-	err := http.ListenAndServeTLS(":"+HTTPSport, serverCert, serverKey, nil)
-
-	//Something went wrong with starting HTTPS server.
-	if err != nil {
-		panic(err)
-	}
+	http.Handle("/login", logging.LogRequests(loginHandlerDecorator(cookieLifeTime, loginController)))
+	http.Handle("/logout", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(logoutHandler))))
+	http.Handle("/main", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(mainHandler))))
+	http.Handle("/login/", logging.LogRequests(http.HandlerFunc(loginUsers)))
+	http.Handle("/", logging.LogRequests(http.HandlerFunc(redirectToLogin)))
+	http.Handle("/page/", logging.LogRequests(fileServer))
 }
