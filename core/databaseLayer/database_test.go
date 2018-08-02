@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/d0ku/database_project_go/core/databaseLayer"
+	"github.com/d0ku/e_register/core/databaseLayer"
 )
 
 var (

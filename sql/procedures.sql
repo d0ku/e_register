@@ -15,6 +15,8 @@ BEGIN
         --user can be created.
         INSERT INTO Users("username", "hashed_password", "user_type", "final_id") VALUES(user_name, crypt(password, gen_salt('bf',8)), usertype, final_id);
         RETURN TRUE;
+        EXCEPTION WHEN integrity_constraint_violation THEN
+            RETURN FALSE;
     END IF;
 END
 $$ language plpgsql;

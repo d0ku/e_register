@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/d0ku/database_project_go/core/sessions"
+	"github.com/d0ku/e_register/core/sessions"
 )
 
 var testPolicy = []*sessions.TimeoutObj{
 	&sessions.TimeoutObj{90, 20},
 	&sessions.TimeoutObj{50, 15},
 	&sessions.TimeoutObj{40, 10},
-	&sessions.TimeoutObj{30, 5},
+	&sessions.TimeoutObj{30, 3},
 }
 
 func TestBasicBehaviourLowestRule(t *testing.T) {
@@ -69,6 +69,23 @@ func TestBasicBehaviourAddTryWhenThereAlreadyIsTimeout(t *testing.T) {
 
 	if controller.GetTimeoutLeft("string") > timeoutLeft {
 		t.Errorf("Time should not be reset when there already is timeout.")
+	}
+}
+
+func TestBasicBehaviourTimeoutEnded(t *testing.T) {
+	controller := sessions.GetLoginTriesController()
+	controller.SpecifyTimeoutPolicy(testPolicy)
+
+	for i := 0; i < 30; i++ {
+		controller.AddTry("test")
+	}
+
+	time.Sleep(4 * time.Second)
+
+	timeoutLeft := controller.GetTimeoutLeft("test")
+
+	if timeoutLeft != 0 {
+		t.Errorf("Timeout should have finished by now.")
 	}
 }
 

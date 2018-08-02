@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/d0ku/database_project_go/core"
+	"github.com/d0ku/e_register/core"
 )
 
 func main() {
