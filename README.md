@@ -4,7 +4,9 @@
 
 ### Dependencies
 [PostgreSQL driver for Go](https://github.com/lib/pq)
+
 [Minifier for JS](https://github.com/tdewolff/minify)
+
 [Sass](https://sass-lang.com)
 
 ### Notes
