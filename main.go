@@ -9,7 +9,24 @@ import (
 	"time"
 
 	"github.com/d0ku/e_register/core"
+	"github.com/d0ku/e_register/core/databasehandling"
 )
+
+func setUpDatabaseConnection(config map[string]string) {
+	//Create dbHandler object.
+	temp, err := databasehandling.GetDatabaseHandler(config["db_username"], config["db_name"])
+	if err != nil {
+		panic(err)
+	}
+
+	//If no errors were thrown, assign this object as global database handler.
+
+	databasehandling.DbHandler = temp
+}
+
+func setUpHTTPHandlers(config map[string]string) {
+
+}
 
 func main() {
 	//read config.cfg, parse it and run server adequately
@@ -52,9 +69,11 @@ func main() {
 		log.Panic("Could not parse cookie_life_time value.")
 	}
 
+	setUpDatabaseConnection(config)
+
 	cookieLifeTime := time.Duration(temp)
 
-	core.Initialize(config["db_username"], config["db_name"], config["web_assets_path"], cookieLifeTime)
+	core.Initialize(config["web_assets_path"], cookieLifeTime)
 
 	core.RunTLS(config["https_port"], config["http_port"], redirect, config["host"], config["server_cert"], config["server_key"])
 }

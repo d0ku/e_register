@@ -17,11 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/d0ku/e_register/core/databaseLayer"
+	"github.com/d0ku/e_register/core/databasehandling"
 	"github.com/d0ku/e_register/core/sessions"
 )
-
-var dbHandler *databaseLayer.DBHandler
 
 var sessionManager *sessions.SessionManager
 var templates map[string]*template.Template
@@ -170,7 +168,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				checkSchool = true
 			}
 
-			user := dbHandler.CheckUserLogin(username, password, userType)
+			user := databasehandling.DbHandler.CheckUserLogin(username, password, userType)
 
 			if !user.Exists {
 				loginTriesController.AddTry(r.RemoteAddr)
@@ -188,7 +186,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 
 			} else {
 				if checkSchool {
-					schoolID := dbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
+					schoolID := databasehandling.DbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
 					if schoolID == -1 {
 						//There is no schoolAdmin with such id.
 
@@ -305,20 +303,9 @@ func logRequests(handler http.Handler) http.Handler {
 }
 
 //Initialize sets up connection with database, and assigns handlers.
-func Initialize(databaseUser string, databaseName string, templatesPath string, cookieLifeTime time.Duration) {
+func Initialize(templatesPath string, cookieLifeTime time.Duration) {
 	//Parse all HTML templates from provided directory.
 	parseAllTemplates(templatesPath)
-
-	//Initialize DB connection.
-	temp, err := databaseLayer.GetDatabaseHandler(databaseUser, databaseName)
-
-	//Could not initialize connection to database.
-	if err != nil {
-		panic(err)
-	}
-
-	//Assign DB handler to global value.
-	dbHandler = temp
 
 	//Initialize session manager.
 	sessionManager = sessions.GetSessionManager(32, time.Second*60*15)

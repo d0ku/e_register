@@ -1,28 +1,27 @@
-package databaseLayer_test
+package databasehandling_test
 
 import (
 	"flag"
 	"os"
 	"testing"
 
-	"github.com/d0ku/e_register/core/databaseLayer"
+	"github.com/d0ku/e_register/core/databasehandling"
 )
 
 var (
 	database = flag.Bool("database", false, "run database integration tests")
 )
 
-var dbHandler *databaseLayer.DBHandler
+var dbHandler *databasehandling.DBHandler
 
 func teardown() {
 	DBAddUserTeardown()
-
 }
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if *database {
-		temp, err := databaseLayer.GetDatabaseHandler("postgres", "test_database")
+		temp, err := databasehandling.GetDatabaseHandler("postgres", "test_database")
 		if err != nil {
 			panic(err)
 		}

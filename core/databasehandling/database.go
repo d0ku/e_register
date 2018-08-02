@@ -1,4 +1,4 @@
-package databaseLayer
+package databasehandling
 
 import (
 	"database/sql"
@@ -6,7 +6,13 @@ import (
 	"log"
 	"strconv"
 
+	//That's the recommended way to do it.
 	_ "github.com/lib/pq"
+)
+
+var (
+	//DbHandler is globally available handler for database, should be only one entry point to DB in whole app.
+	DbHandler *DBHandler
 )
 
 type DBHandler struct {
