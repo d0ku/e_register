@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/d0ku/database_project_go/core/sessions"
+	"github.com/d0ku/e_register/core/sessions"
 )
 
 var testPolicy = []*sessions.TimeoutObj{
