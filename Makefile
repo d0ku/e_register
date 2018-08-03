@@ -8,7 +8,7 @@ JS_DEV_PATH = page/js/
 all: deps sql css js app tests
 
 app:
-	go build -o $(e_register_bin)
+	go build -o $(BINARY_FILE_NAME)
 
 sql:
 	cd sql && make DB_NAME=$(DB_NAME) DB_USERNAME=$(DB_USERNAME) DB_ADD_TEST_DATA=$(DB_ADD_TEST_DATA)
