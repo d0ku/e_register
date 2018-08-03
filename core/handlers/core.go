@@ -80,6 +80,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = templates["index.gtpl"].Execute(w, session.Data["username"])
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Print(err)
 		}
 	}
@@ -111,6 +112,7 @@ func loginUsers(w http.ResponseWriter, r *http.Request) {
 	//Execute template with correct value to be set as hidden attribute in HTML form.
 	err := templates["login_form.gtpl"].Execute(w, userType)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Print(err)
 	}
 }
@@ -122,6 +124,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 
 		err := templates["login.gtpl"].Execute(w, nil)
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Print(err)
 		}
 		return
@@ -182,6 +185,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				log.Print("LOGIN|Unsuccessful try to log in from:" + r.RemoteAddr)
 				err := templates["login_error.gtpl"].Execute(w, userLoginTry)
 				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
 					log.Print(err)
 				}
 
@@ -202,6 +206,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 						//When teacher tries to login as admin, he gets same error message as if his username and password didn't match. That's the case after all.
 						err := templates["login_error.gtpl"].Execute(w, userLoginTry)
 						if err != nil {
+							http.Error(w, err.Error(), http.StatusInternalServerError)
 							log.Print(err)
 						}
 
@@ -239,7 +244,10 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handl
 
 		if err != nil {
 			log.Print(err)
-			templates["not_logged.gtpl"].Execute(w, nil)
+			err := templates["not_logged.gtpl"].Execute(w, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 
@@ -248,6 +256,10 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handl
 		if ok != nil {
 			log.Print("LOGIN|User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
 			templates["not_logged.gtpl"].Execute(w, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+
 			return
 		}
 
