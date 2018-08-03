@@ -1,12 +1,9 @@
 package handlers
 
-//TODO: Send 500s when template could not be executed.
-
 //TODO:	User has to perform action in specified amount of time, add counter of cookie lifetime on webpage.
 
 //User session life period is stored in cookie and removed after time ends.
 
-//All rs are checked for sessionID cookie when we get them, so there is no need to check for errors in getting that cookie in later rs.
 import (
 	"errors"
 	"html/template"
@@ -14,16 +11,22 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
-	"github.com/d0ku/e_register/core/databasehandling"
 	"github.com/d0ku/e_register/core/logging"
 	"github.com/d0ku/e_register/core/sessions"
 )
 
-var sessionManager *sessions.SessionManager
-var templates map[string]*template.Template
+var (
+	sessionManager *sessions.SessionManager
+	//templates contains parsed HTML templates.
+	templates map[string]*template.Template
+
+	//ErrNoSuchSession is returned when request contains sessionID cookie, but sessionManager can't find it.
+	ErrNoSuchSession = errors.New("Session with such sessionID does not exist")
+	//ErrNoSuchSessionCookie is returned when request does not contain sessionID cookie.
+	ErrNoSuchSessionCookie = errors.New("No sessionID cookie set")
+)
 
 //Gets session data from request and automatically handles:
 //- no cookie at all
@@ -32,7 +35,7 @@ var templates map[string]*template.Template
 func getSessionFromRequest(w http.ResponseWriter, r *http.Request) (*sessions.Session, error) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
-		return nil, errors.New("No cookie set")
+		return nil, ErrNoSuchSessionCookie
 	}
 
 	session, err := sessionManager.GetSession(cookie.Value)
@@ -41,7 +44,7 @@ func getSessionFromRequest(w http.ResponseWriter, r *http.Request) (*sessions.Se
 		//Delete cookie which is not recognized on server side.
 		cookie.Expires = time.Unix(0, 0)
 		http.SetCookie(w, cookie)
-		return nil, errors.New("That session does not exist")
+		return nil, ErrNoSuchSession
 	}
 
 	return session, nil
@@ -72,189 +75,12 @@ func parseAllTemplates(pageFolder string) {
 	log.Print("TEMPLATES|Parsing finished...")
 }
 
-func mainHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		var err error
-		//We know that request has been checked previously so there is no need to check for error.
-		session, _ := getSessionFromRequest(w, r)
-
-		err = templates["index.gtpl"].Execute(w, session.Data["username"])
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Print(err)
-		}
-	}
-}
-
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	//Case where user is not logged in is not possible, because of checking for needed cookie before calling this function.
-	cookie, _ := r.Cookie("sessionID")
-
-	session, err := sessionManager.GetSession(cookie.Value)
-	if err != nil {
-		log.Print(err)
-	} else {
-		log.Print("LOGIN|Successfully logged out: " + session.Data["username"] + " from:" + r.RemoteAddr)
-	}
-
-	//Delete cookie and redirect to main.
-	cookie.Expires = time.Unix(0, 0)
-	http.SetCookie(w, cookie)
-	sessionManager.RemoveSession(cookie.Value)
-
-	http.Redirect(w, r, "/login", http.StatusFound)
-}
-
-func loginUsers(w http.ResponseWriter, r *http.Request) {
-	fields := strings.Split(r.RequestURI, "/")
-	userType := fields[len(fields)-1]
-
-	//Execute template with correct value to be set as hidden attribute in HTML form.
-	err := templates["login_form.gtpl"].Execute(w, userType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Print(err)
-	}
-}
-
-func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("sessionID")
-	if err != nil {
-		//User is not logged in, cookie does not exist, normal use-case.
-
-		err := templates["login.gtpl"].Execute(w, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Print(err)
-		}
-		return
-	}
-
-	_, err = sessionManager.GetSession(cookie.Value)
-
-	if err != nil {
-		//User tried to log in with expired cookie or he is trying to do something malicious.
-		log.Print("LOGIN|Incorrect cookie on user side.")
-
-		//Remove expired cookie from client side.
-		cookie.Expires = time.Unix(0, 0)
-		http.SetCookie(w, cookie)
-
-		//Show user information page saying that he is not logged in.
-		templates["not_logged.gtpl"].Execute(w, nil)
-		return
-	}
-
-	//If logged user tries to access /login page, we redirect him to /main.
-	//BUG: [possible] Is this correct http status for such case?
-
-	http.Redirect(w, r, "/main", http.StatusSeeOther)
-}
-
-func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *sessions.LoginTriesController) http.Handler {
+func redirectToLoginPageIfUserNotLogged(h http.Handler, messagePorts ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			loginHandlerGET(w, r)
-		} else { //POST request.
-			r.ParseForm()
-			//Validate data, and check whether it can be used to log into database.
-			username := template.HTMLEscapeString(r.Form["username"][0])
-			password := template.HTMLEscapeString(r.Form["password"][0])
-			userType := template.HTMLEscapeString(r.Form["userType"][0])
-
-			var checkSchool bool
-
-			userLoginTry := &sessions.UserLoginTry{UserType: userType, UserName: username, Timeout: 0, HasTimeout: false}
-			//log.Println(userLoginTry)
-
-			if userType == "schoolAdmin" {
-				userType = "teacher"
-				checkSchool = true
-			}
-
-			user := databasehandling.DbHandler.CheckUserLogin(username, password, userType)
-
-			if !user.Exists {
-				loginTriesController.AddTry(r.RemoteAddr)
-				timeoutSecs := loginTriesController.GetTimeoutLeft(r.RemoteAddr)
-				if timeoutSecs != 0 {
-					userLoginTry.Timeout = timeoutSecs
-					userLoginTry.HasTimeout = true
-				}
-
-				log.Print("LOGIN|Unsuccessful try to log in from:" + r.RemoteAddr)
-				err := templates["login_error.gtpl"].Execute(w, userLoginTry)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					log.Print(err)
-				}
-
-			} else {
-				if checkSchool {
-					schoolID := databasehandling.DbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
-					if schoolID == -1 {
-						//There is no schoolAdmin with such id.
-
-						//Timeouts are also issued when someone tries to log in as admin, when user is only a teacher.
-						loginTriesController.AddTry(r.RemoteAddr)
-						timeoutSecs := loginTriesController.GetTimeoutLeft(r.RemoteAddr)
-						if timeoutSecs != 0 {
-							userLoginTry.Timeout = timeoutSecs
-							userLoginTry.HasTimeout = true
-						}
-
-						//When teacher tries to login as admin, he gets same error message as if his username and password didn't match. That's the case after all.
-						err := templates["login_error.gtpl"].Execute(w, userLoginTry)
-						if err != nil {
-							http.Error(w, err.Error(), http.StatusInternalServerError)
-							log.Print(err)
-						}
-
-						log.Print("LOGIN|Unsuccessful try to log in as admin (no permissions) from:" + username)
-						return
-					}
-					log.Print("LOGIN|Successful admin logon from:" + r.RemoteAddr)
-				}
-				loginTriesController.ResetTries(r.RemoteAddr)
-
-				log.Print("LOGIN|Logon as: " + username + " from:" + r.RemoteAddr)
-
-				//We always create new session for users who don't have valid cookies.
-				sessionID := sessionManager.GetSessionID(username)
-
-				//Send cookie with defined expiration time and sessionID value to user.
-				cookie := &http.Cookie{Name: "sessionID", Value: sessionID, Expires: time.Now().Add(cookieLifeTime * time.Second), Secure: true, HttpOnly: false}
-
-				//Send cookie with sessionID to Client.
-				http.SetCookie(w, cookie)
-
-				//Redirect user to main.
-
-				//TODO: is that correct http status?
-
-				http.Redirect(w, r, "/main", http.StatusSeeOther)
-			}
-		}
-	})
-}
-
-func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("sessionID")
+		_, err := getSessionFromRequest(w, r)
 
 		if err != nil {
-			log.Print(err)
-			err := templates["not_logged.gtpl"].Execute(w, nil)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-
-		_, ok := sessionManager.GetSession(cookie.Value)
-
-		if ok != nil {
-			log.Print("LOGIN|User from: " + r.RemoteAddr + " tried to log in with incorrect cookie.")
+			log.Print("LOGIN|User from: " + r.RemoteAddr + " tried to access app page without privileges.")
 			templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -262,7 +88,6 @@ func redirectWithErrorToLogin(h http.Handler, messagePorts ...string) http.Handl
 
 			return
 		}
-
 		h.ServeHTTP(w, r)
 	})
 }
@@ -271,22 +96,24 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusMovedPermanently)
 }
 
-//Initialize sets up connection with database, and assigns handlers.
+//Initialize assigns handlers to provided mux and sets up sessionManager with provided session life time.
+//It also parses all HTML templates located under templatesPath.
 func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging.MuxController) {
 	//Parse all HTML templates from provided directory.
 	parseAllTemplates(templatesPath)
 
 	//Initialize session manager.
-	sessionManager = sessions.GetSessionManager(32, time.Second*60*15)
+	sessionManager = sessions.GetSessionManager(32, cookieLifeTime)
 
 	//Initialize timeouts after too many login tries module.
 	loginController := sessions.GetLoginTriesController()
 
+	//Create fileServer to deliver static content.
 	fileServer := http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))
 
 	mux.Handle("/login", loginHandlerDecorator(cookieLifeTime, loginController))
-	mux.Handle("/logout", redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))
-	mux.Handle("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
+	mux.Handle("/logout", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(logoutHandler)))
+	mux.Handle("/main", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandler)))
 	mux.Handle("/login/", http.HandlerFunc(loginUsers))
 	mux.Handle("/", http.HandlerFunc(redirectToLogin))
 	mux.Handle("/page/", fileServer)

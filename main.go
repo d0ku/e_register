@@ -14,6 +14,7 @@ import (
 )
 
 func setUpDatabaseConnection(config map[string]string) {
+	//TODO: maybe just provide connection string from here?
 	//Create dbHandler object.
 	temp, err := databasehandling.GetDatabaseHandler(config["db_username"], config["db_name"], config["db_password"], config["db_sslmode"])
 	if err != nil {
@@ -31,7 +32,7 @@ func setUpHTTPHandlers(config map[string]string) {
 		log.Panic("Could not parse cookie_life_time value.")
 	}
 
-	cookieLifeTime := time.Duration(temp)
+	cookieLifeTime := time.Duration(temp) * time.Second
 	handlers.Initialize(config["web_assets_path"], cookieLifeTime, server.MainServerMux)
 }
 

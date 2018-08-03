@@ -19,6 +19,7 @@ type DBHandler struct {
 	*sql.DB
 }
 
+//TODO: implement specyfing remote server address for SQL connection.
 func GetDatabaseHandler(username string, dbName string, dbPassword string, sslmode string) (*DBHandler, error) {
 	var err error
 	//TODO: connect to postgres by SSL (sslmode=verify-full)
