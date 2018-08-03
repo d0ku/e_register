@@ -1,5 +1,7 @@
 package handlers
 
+//TODO: Send 500s when template could not be executed.
+
 //TODO:	User has to perform action in specified amount of time, add counter of cookie lifetime on webpage.
 
 //User session life period is stored in cookie and removed after time ends.
@@ -258,7 +260,7 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 //Initialize sets up connection with database, and assigns handlers.
-func Initialize(templatesPath string, cookieLifeTime time.Duration) {
+func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging.MuxController) {
 	//Parse all HTML templates from provided directory.
 	parseAllTemplates(templatesPath)
 
@@ -270,10 +272,10 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration) {
 
 	fileServer := http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))
 
-	http.Handle("/login", logging.LogRequests(loginHandlerDecorator(cookieLifeTime, loginController)))
-	http.Handle("/logout", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(logoutHandler))))
-	http.Handle("/main", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(mainHandler))))
-	http.Handle("/login/", logging.LogRequests(http.HandlerFunc(loginUsers)))
-	http.Handle("/", logging.LogRequests(http.HandlerFunc(redirectToLogin)))
-	http.Handle("/page/", logging.LogRequests(fileServer))
+	mux.Handle("/login", logging.LogRequests(loginHandlerDecorator(cookieLifeTime, loginController)))
+	mux.Handle("/logout", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(logoutHandler))))
+	mux.Handle("/main", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(mainHandler))))
+	mux.Handle("/login/", logging.LogRequests(http.HandlerFunc(loginUsers)))
+	mux.Handle("/", logging.LogRequests(http.HandlerFunc(redirectToLogin)))
+	mux.Handle("/page/", logging.LogRequests(fileServer))
 }

@@ -32,10 +32,10 @@ func setUpHTTPHandlers(config map[string]string) {
 	}
 
 	cookieLifeTime := time.Duration(temp)
-	handlers.Initialize(config["web_assets_path"], cookieLifeTime)
+	handlers.Initialize(config["web_assets_path"], cookieLifeTime, server.MainServerMux)
 }
 
-func setUpServer(config map[string]string) {
+func setUpAndRunServer(config map[string]string) {
 	val := config["redirect_http_to_https"]
 
 	var redirect bool
@@ -44,7 +44,32 @@ func setUpServer(config map[string]string) {
 		redirect = true
 	}
 
-	server.RunTLS(config["https_port"], config["http_port"], redirect, config["host"], config["server_cert"], config["server_key"])
+	if redirect {
+		serverRedirect := server.GetRedirectServer(config["https_port"], config["http_port"])
+
+		go func() {
+			err := serverRedirect.ListenAndServe()
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
+
+	mainServer := server.GetTLSServer(config["https_port"])
+
+	log.Print()
+	if config["https_port"] == "443" {
+		log.Print("Listen to me at https://" + config["host"])
+	} else {
+		log.Print("Listen to me at https://" + config["host"] + ":" + config["https_port"])
+	}
+
+	err := mainServer.ListenAndServeTLS(config["server_cert"], config["server_key"])
+
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 func parseConfigFile(configPath *string, config map[string]string) {
@@ -83,5 +108,5 @@ func main() {
 
 	setUpDatabaseConnection(config)
 	setUpHTTPHandlers(config)
-	setUpServer(config)
+	setUpAndRunServer(config)
 }
