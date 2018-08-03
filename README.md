@@ -9,6 +9,10 @@
 
 [Sass](https://sass-lang.com)
 
+### How to build
+
+You should configure files in config directory and change variables on top of Makefile in main directory to suit your needs.
+
 ### Notes
 
 Timeout for too many login tries won't work if server is run behind a proxy (nginx, apache, etc.)

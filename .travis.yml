@@ -8,10 +8,10 @@ git:
 
 before_script:
     - go get github.com/lib/pq
-    - psql -c 'CREATE DATABASE test_database;' -U postgres
-    - psql -c '\i ./sql/extensions.sql' -U postgres -d test_database
-    - psql -c '\i ./sql/create_tables.sql' -U postgres -d test_database
-    - psql -c '\i ./sql/procedures.sql' -U postgres -d test_database
+    #- psql -c 'CREATE DATABASE test_database;' -U postgres
+    #- psql -c '\i ./sql/extensions.sql' -U postgres -d test_database
+    #- psql -c '\i ./sql/create_tables.sql' -U postgres -d test_database
+    #- psql -c '\i ./sql/procedures.sql' -U postgres -d test_database
     - npm install -g sass
 
 addons:
