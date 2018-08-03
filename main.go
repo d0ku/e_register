@@ -15,7 +15,7 @@ import (
 
 func setUpDatabaseConnection(config map[string]string) {
 	//Create dbHandler object.
-	temp, err := databasehandling.GetDatabaseHandler(config["db_username"], config["db_name"], config["db_password"])
+	temp, err := databasehandling.GetDatabaseHandler(config["db_username"], config["db_name"], config["db_password"], config["db_sslmode"])
 	if err != nil {
 		panic(err)
 	}

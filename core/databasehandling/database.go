@@ -19,11 +19,11 @@ type DBHandler struct {
 	*sql.DB
 }
 
-func GetDatabaseHandler(username string, dbName string, dbPassword string) (*DBHandler, error) {
+func GetDatabaseHandler(username string, dbName string, dbPassword string, sslmode string) (*DBHandler, error) {
 	var err error
 	//TODO: connect to postgres by SSL (sslmode=verify-full)
 
-	connStr := "user=" + username + " dbname=" + dbName + " sslmode=disable " + "password=" + dbPassword
+	connStr := "user=" + username + " dbname=" + dbName + " sslmode=" + sslmode + " password=" + dbPassword
 	dbConnection, err := sql.Open("postgres", connStr)
 
 	if err == nil {
