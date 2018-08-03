@@ -21,7 +21,7 @@ func teardown() {
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if *database {
-		temp, err := databasehandling.GetDatabaseHandler("postgres", "test_database")
+		temp, err := databasehandling.GetDatabaseHandler("test_user", "e_register", "test_password")
 		if err != nil {
 			panic(err)
 		}
