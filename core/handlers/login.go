@@ -25,7 +25,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print("LOGIN|Successfully logged out: " + session.Data["username"] + " from:" + r.RemoteAddr)
 		}
 
-		//Delete cookie and redirect to main.
+		//Delete cookie and redirect to login.
 		cookie.Expires = time.Unix(0, 0)
 		http.SetCookie(w, cookie)
 		sessionManager.RemoveSession(cookie.Value)
@@ -59,7 +59,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = sessionManager.GetSession(cookie.Value)
+	session, err := sessionManager.GetSession(cookie.Value)
 
 	if err != nil {
 		//User tried to log in with expired cookie or he is trying to do something malicious.
@@ -76,7 +76,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 
 	//If logged user tries to access /login page, we redirect him to /main.
 
-	http.Redirect(w, r, "/main", http.StatusSeeOther)
+	http.Redirect(w, r, "/main/"+session.Data["user_type"], http.StatusSeeOther)
 }
 
 func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *sessions.LoginTriesController) http.Handler {
@@ -150,6 +150,15 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				//We always create new session for users who don't have valid cookies.
 				sessionID := sessionManager.GetSessionID(username)
 
+				//We add information about user type (basically as which the user has authenticated) to session.
+				session, err := sessionManager.GetSession(sessionID)
+				if err != nil {
+					//There is literally no way for this to error out, but we check it anyway.
+					log.Print(err)
+				} else {
+					session.Data["user_type"] = userLoginTry.UserType
+				}
+
 				//Send cookie with defined expiration time and sessionID value to user.
 				cookie := &http.Cookie{Name: "sessionID", Value: sessionID, Expires: time.Now().Add(cookieLifeTime * time.Second), Secure: true, HttpOnly: false}
 
@@ -157,10 +166,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				http.SetCookie(w, cookie)
 
 				//Redirect user to main.
-
-				//TODO: is that correct http status?
-
-				http.Redirect(w, r, "/main", http.StatusSeeOther)
+				http.Redirect(w, r, "/main/"+session.Data["user_type"], http.StatusSeeOther)
 			}
 		}
 	})
