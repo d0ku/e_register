@@ -12,19 +12,14 @@ then
     exit
 fi
 
-populateDB=0
-
-#TODO: Is this condition correct?
-if [ -z "$3" ]
-then
-    populateDB=$3
-fi
-
 psql -d $1 -f ./extensions.sql
 psql -d $1 -f ./create_tables.sql
 psql -d $1 -f ./procedures.sql
 
-if [ $3 -eq 1 ]
+if [ "$3" != "" ]
 then
-    psql -d $1 -f ./test_commands.sql
+    if [ "$3" == "1" ]
+    then
+        psql -d $1 -f ./test_commands.sql
+    fi
 fi
