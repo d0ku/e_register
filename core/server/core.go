@@ -1,13 +1,15 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/d0ku/e_register/core/logging"
 )
+
+//MainServerMux is object to which all handlers should be added.
+var MainServerMux = logging.GetMux(http.NewServeMux())
 
 func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,26 +28,24 @@ func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
-//RunTLS starts initialized server on specified port with TLS.
-func RunTLS(HTTPSport string, HTTPort string, redirectHTTPtoHTTPS bool, hostname string, serverCert string, serverKey string) {
-
-	//Redirect HTTP trafic to HTTPS port with changed protocol if such option was specified.
-	if redirectHTTPtoHTTPS {
-		go func() {
-			err := http.ListenAndServe(":"+HTTPort, logging.LogRequests(redirectToHTTPS(http.HandlerFunc(placeHolderHandler), HTTPSport)))
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
+//GetTLSServer returns server with set up Port.
+func GetTLSServer(HTTPSPort string) *http.Server {
+	server := &http.Server{
+		Addr:    ":" + HTTPSPort,
+		Handler: MainServerMux,
 	}
 
-	fmt.Println()
-	fmt.Println("Listen to me at: https://" + hostname + ":" + HTTPSport)
+	return server
+}
 
-	err := http.ListenAndServeTLS(":"+HTTPSport, serverCert, serverKey, nil)
+//GetRedirectServer returns server used to redirect http request to https.
+func GetRedirectServer(HTTPSPort string, HTTPPort string) *http.Server {
+	redirectHandler := logging.LogRequests(redirectToHTTPS(http.HandlerFunc(placeHolderHandler), HTTPSPort))
 
-	//Something went wrong with starting HTTPS server.
-	if err != nil {
-		panic(err)
+	server := &http.Server{
+		Addr:    ":" + HTTPPort,
+		Handler: redirectHandler,
 	}
+
+	return server
 }
