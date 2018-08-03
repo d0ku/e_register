@@ -284,10 +284,10 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging
 
 	fileServer := http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))
 
-	mux.Handle("/login", logging.LogRequests(loginHandlerDecorator(cookieLifeTime, loginController)))
-	mux.Handle("/logout", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(logoutHandler))))
-	mux.Handle("/main", logging.LogRequests(redirectWithErrorToLogin(http.HandlerFunc(mainHandler))))
-	mux.Handle("/login/", logging.LogRequests(http.HandlerFunc(loginUsers)))
-	mux.Handle("/", logging.LogRequests(http.HandlerFunc(redirectToLogin)))
-	mux.Handle("/page/", logging.LogRequests(fileServer))
+	mux.Handle("/login", loginHandlerDecorator(cookieLifeTime, loginController))
+	mux.Handle("/logout", redirectWithErrorToLogin(http.HandlerFunc(logoutHandler)))
+	mux.Handle("/main", redirectWithErrorToLogin(http.HandlerFunc(mainHandler)))
+	mux.Handle("/login/", http.HandlerFunc(loginUsers))
+	mux.Handle("/", http.HandlerFunc(redirectToLogin))
+	mux.Handle("/page/", fileServer)
 }
