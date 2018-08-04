@@ -96,6 +96,111 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusMovedPermanently)
 }
 
+//TODO: Permission checkers should check more details.
+func checkStudentPermissions(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := getSessionFromRequest(w, r)
+		if err != nil {
+			log.Print(err)
+			templates["not_logged.gtpl"].Execute(w, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+
+			return
+		}
+
+		userType, ok := session.Data["user_type"]
+
+		if !ok || userType != "student" {
+			templates["no_permission.gtpl"].Execute(w, userType)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+func checkParentPermissions(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := getSessionFromRequest(w, r)
+		if err != nil {
+			log.Print(err)
+			templates["not_logged.gtpl"].Execute(w, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+
+			return
+		}
+
+		userType, ok := session.Data["user_type"]
+
+		if !ok || userType != "parent" {
+			templates["no_permission.gtpl"].Execute(w, userType)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+func checkSchoolAdminPermissions(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := getSessionFromRequest(w, r)
+		if err != nil {
+			log.Print(err)
+			templates["not_logged.gtpl"].Execute(w, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+
+			return
+		}
+
+		userType, ok := session.Data["user_type"]
+
+		if !ok || userType != "schoolAdmin" {
+			templates["no_permission.gtpl"].Execute(w, userType)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+func checkTeacherPermissions(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := getSessionFromRequest(w, r)
+		if err != nil {
+			log.Print(err)
+			templates["not_logged.gtpl"].Execute(w, nil)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+
+			return
+		}
+
+		userType, ok := session.Data["user_type"]
+
+		if !ok || userType != "teacher" {
+			templates["no_permission.gtpl"].Execute(w, userType)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
 //Initialize assigns handlers to provided mux and sets up sessionManager with provided session life time.
 //It also parses all HTML templates located under templatesPath.
 func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging.MuxController) {
@@ -115,10 +220,10 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging
 	mux.Handle("/login", loginHandlerDecorator(cookieLifeTime, loginController))
 	mux.Handle("/logout", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(logoutHandler)))
 	mux.Handle("/main/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandler)))
-	mux.Handle("/main/teacher/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleTeacher)))
-	mux.Handle("/main/student/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleStudent)))
-	mux.Handle("/main/schoolAdmin/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleSchoolAdmin)))
-	mux.Handle("/main/parent/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleParent)))
+	mux.Handle("/main/teacher/", checkTeacherPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleTeacher))))
+	mux.Handle("/main/student/", checkStudentPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleStudent))))
+	mux.Handle("/main/schoolAdmin/", checkSchoolAdminPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleSchoolAdmin))))
+	mux.Handle("/main/parent/", checkParentPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleParent))))
 	mux.Handle("/login/", http.HandlerFunc(loginUsers))
 	mux.Handle("/", http.HandlerFunc(redirectToLogin))
 	mux.Handle("/page/", fileServer)

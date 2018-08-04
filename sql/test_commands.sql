@@ -3,6 +3,7 @@ SELECT add_user('testUser','testPassword','teacher',1); --should return false (d
 --SELECT add_user('testUser2','testPassword','teacher',1); --should return true (correct) --TODO: this should return false, as id duplicates first entry, there should be trigger for this
 SELECT add_user('testUser2','testPassword','teacher',2); --should return true (correct)
 SELECT add_user('testUser3','testPassword','teacher',3); --should return true (correct)
+SELECT add_user('testStudent','testPassword','student',1); --should return true (correct)
 
 SELECT check_login_data('testUser','testPassword', 'teacher'); --should return true,teacher,1
 SELECT check_login_data('testUserFailed','testPassword', 'parent'); --should return false,-,-
