@@ -21,55 +21,63 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		schools, err := getSchoolsToChoose(session.Data["user_type"], session.Data["id"])
+		schools, err := getDataToChoose(session.Data["user_type"], session.Data["id"])
 
 		if err != nil {
 			log.Print(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
+		//No school/children to log into.
 		if len(schools) == 0 {
-			//TODO: write template for this.
-			w.Write([]byte("Nie należysz do żadnej szkoły."))
-		}
+			err := templates["no_school.gtpl"].Execute(w, nil)
 
-		if len(schools) == 1 {
-			http.Redirect(w, r, "/main/"+session.Data["user_type"]+"/"+strconv.FormatInt(int64(schools[0].Id), 10), http.StatusSeeOther)
-		}
-
-		//Many schools to choose from.
-
-		templateData := chooseSchoolTemplateParse{schools, session.Data["user_type"], session.Data["username"]}
-
-		err = templates["choose_school.gtpl"].Execute(w, templateData)
-
-		if err != nil {
-			log.Print(err)
-		}
-
-		/*
-			switch session.Data["user_type"] {
-
-			case "teacher":
-				mainHandleTeacher(w, r)
-			case "schoolAdmin":
-				mainHandleSchoolAdmin(w, r)
-			case "student":
-				mainHandleStudent(w, r)
-			case "parent":
-				mainHandleParent(w, r)
-
-			default:
-				//TODO: should such unknown user be automatically logged out and his cookie deleted?
-				log.Print("BUG|There was a try to log in as user of not specified type, this should not happen.")
+			if err != nil {
+				log.Print(err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
-		*/
 
+		} else if len(schools) == 1 {
+			//Only one school or children, redirect to it instantly.e
+			http.Redirect(w, r, "/main/"+session.Data["user_type"]+"/"+strconv.FormatInt(int64(schools[0].Id), 10), http.StatusSeeOther)
+		} else {
+
+			//Many schools or children to choose from.
+
+			templateData := chooseSchoolTemplateParse{schools, session.Data["user_type"], session.Data["username"]}
+
+			err = templates["choose_school.gtpl"].Execute(w, templateData)
+
+			if err != nil {
+				log.Print(err)
+			}
+
+			/*
+				switch session.Data["user_type"] {
+
+				case "teacher":
+					mainHandleTeacher(w, r)
+				case "schoolAdmin":
+					mainHandleSchoolAdmin(w, r)
+				case "student":
+					mainHandleStudent(w, r)
+				case "parent":
+					mainHandleParent(w, r)
+
+				default:
+					//TODO: should such unknown user be automatically logged out and his cookie deleted?
+					log.Print("BUG|There was a try to log in as user of not specified type, this should not happen.")
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+			*/
+
+		}
 	}
 }
 
-func getSchoolsToChoose(userType string, userID string) ([]databasehandling.School, error) {
+func getDataToChoose(userType string, userID string) ([]databasehandling.School, error) {
+	//Return schools in case of teachers and admins, children in case of parents and class in case of student.
 	var schools []databasehandling.School
 	var err error
 
