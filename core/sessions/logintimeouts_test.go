@@ -1,5 +1,7 @@
 package sessions_test
 
+//BUG: Tests are slow because of time.Sleep calls, is there any way to change it?
+
 import (
 	"testing"
 	"time"

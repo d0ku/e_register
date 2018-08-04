@@ -2,10 +2,20 @@
 
 [![Build Status](https://travis-ci.com/d0ku/e_register.svg?token=czCs7ySFgsJtHB5vZwPp&branch=master)](https://travis-ci.com/d0ku/e_register)
 
+## Important
+
+By default Makefile configures PostgreSQL to be run on local machine, not on remote server. If that's not the case for you, it has to be changed.
+
 ### Dependencies
 [PostgreSQL driver for Go](https://github.com/lib/pq)
+
 [Minifier for JS](https://github.com/tdewolff/minify)
+
 [Sass](https://sass-lang.com)
+
+### How to build
+
+You should configure files in config directory and change variables on top of Makefile in main directory to suit your needs.
 
 ### Notes
 

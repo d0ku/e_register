@@ -15,8 +15,8 @@ BEGIN
         --user can be created.
         INSERT INTO Users("username", "hashed_password", "user_type", "final_id") VALUES(user_name, crypt(password, gen_salt('bf',8)), usertype, final_id);
         RETURN TRUE;
-        EXCEPTION WHEN integrity_constraint_violation THEN
-            RETURN FALSE;
+--        EXCEPTION WHEN integrity_constraint_violation THEN
+--           RETURN FALSE;
     END IF;
 END
 $$ language plpgsql;
@@ -226,3 +226,28 @@ BEGIN
 END
 $$ language plpgsql;
 
+CREATE OR REPLACE FUNCTION get_schools_teacher_teaches_in(IN teacher_id integer ) RETURNS TABLE (
+   id_teacher_out integer) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT id_school
+    FROM TeachersSchools
+    WHERE id_teacher=teacher_id;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION get_schools_details_where_teacher_teaches(IN teacher_id integer) RETURNS TABLE (
+    id_school_out integer,
+    full_name_out text,
+    city_out text,
+    street_out text,
+    school_type_out school_type)
+    AS $$ 
+BEGIN
+    RETURN QUERY 
+    SELECT Schools.id_school, Schools.full_name, Addresses.city, Addresses.street, Schools.typ 
+    FROM Schools INNER JOIN TeachersSchools ON (Schools.id_school=TeachersSchools.id_school)
+    INNER JOIN Addresses ON (Schools.id_address=Addresses.id_address)
+    WHERE id_teacher=teacher_id;
+END
+$$ language plpgsql;

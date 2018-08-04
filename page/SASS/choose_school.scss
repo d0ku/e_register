@@ -1,0 +1,18 @@
+@import 'base';
+
+.schoolBox {
+    @extend .button;
+    font-size: 1em;
+    margin: 14px;
+}
+
+.name {
+    font-family: $about_font;
+    font-size: 1.3em;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.city {
+    display: block;
+}

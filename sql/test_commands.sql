@@ -2,22 +2,18 @@ SELECT add_user('testUser','testPassword','teacher',1); --should return true (co
 SELECT add_user('testUser','testPassword','teacher',1); --should return false (duplicate)
 --SELECT add_user('testUser2','testPassword','teacher',1); --should return true (correct) --TODO: this should return false, as id duplicates first entry, there should be trigger for this
 SELECT add_user('testUser2','testPassword','teacher',2); --should return true (correct)
+SELECT add_user('testUser3','testPassword','teacher',3); --should return true (correct)
 
 SELECT check_login_data('testUser','testPassword', 'teacher'); --should return true,teacher,1
 SELECT check_login_data('testUserFailed','testPassword', 'parent'); --should return false,-,-
 SELECT check_login_data('testUser','testPassword', 'parent'); --should return false,-,- (bad user_type)
-
-SELECT add_session('abba','makro'); --should return true
-SELECT add_session('abba','makro'); --should return false
-
-SELECT delete_session('abba'); --should return true
 
 SELECT add_semester('summer',2018); --should return 1 (correct)
 SELECT add_semester('winter',2018); --should return 2 (correct)
 SELECT add_semester('winter',2018); --should return -1 (duplicate)
 
 SELECT get_address_id('Paradise City','Imagined','12a','3','01-231'); --should return 1 (correct, create)
-SELECT get_address_id('Paradise City','Imagined','12a','3','01-232'); --should return 2 (correct, create)
+SELECT get_address_id('City Wok','Baker Street','32c','3','01-232'); --should return 2 (correct, create)
 SELECT get_address_id('Paradise City','Imagined','12a','3','01-231'); --should return 1 (correct, find)
 
 SELECT add_subject('Science'); --should return 1 (correct)
@@ -25,7 +21,7 @@ SELECT add_subject('Math'); --should return 2 (correct)
 SELECT add_subject('Science'); --should return -1 (duplicate)
 
 SELECT add_school('dummySchool',1,'LO','standard'); --should return 1 (correct)
-SELECT add_school('dummySchool',1,'TECH','standard'); --should return 2 (correct)
+SELECT add_school('Hogwart',2,'TECH','standard'); --should return 2 (correct)
 SELECT add_school('dummySchool',1,'LO','standard'); --should return -1 (duplicate)
 
 SELECT add_teacher(1,'tempFor','tempSur','mgr.','male','Jan-18-1923'); --should return 1 (correct)
@@ -33,7 +29,9 @@ SELECT add_teacher(1,'tempFor','tempSur','mgr.','male','Jan-18-1924'); --should 
 SELECT add_teacher(1,'tempFor','tempSur','mgr.','male','Jan-18-1923'); -- should return -1 (duplicate)
 
 SELECT add_teacher_to_school(1,1); --should return t (correct)
+SELECT add_teacher_to_school(1,2); --should return t (correct)
 SELECT add_teacher_to_school(1,1); --should return f (duplicate)
+SELECT add_teacher_to_school(2,1); --should return t (correct)
 SELECT add_teacher_to_school(11,1); --should return f (non-existing teacher)
 SELECT add_teacher_to_school(1,21); --should return f (non-existing school)
 
