@@ -15,17 +15,14 @@
                     <span class="about">
                     Wybierz szkołę którą chcesz zarządzać:
                     </span>
-                    {{ range .Schools }}
-                    <a class="schoolBox" href="/main/{{ $.UserType }}/{{ .Id }}">
-                        <span class="name">{{ .FullName }}</span>
-                        <span class="city">{{ .City }}</span>
-                        <span class="street">{{ .Street }}</span>
+                    {{ range $key, $school := .Schools }}
+                    <a class="schoolBox" href="/main/{{ $.UserType }}/{{ $school.Id }}">
+                        <span class="name">{{ $school.FullName }}</span>
+                        <span class="city">{{ $school.City }}</span>
+                        <span class="street">{{ $school.Street }}</span>
                     </a>
                     {{ end }}
                     <br/>
-                    <span class="help">
-                    Aby wybrać szkołe kliknij na odpowiedni przycisk.
-                    </span>
                 </div>
             </div>
         </div>

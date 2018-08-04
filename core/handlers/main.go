@@ -56,7 +56,7 @@ func mainHandleStudent(w http.ResponseWriter, r *http.Request) {
 }
 
 type chooseSchoolTemplateParse struct {
-	Schools  []*databasehandling.School
+	Schools  []databasehandling.School
 	UserType string
 	UserName string
 }

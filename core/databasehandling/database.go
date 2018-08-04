@@ -90,7 +90,8 @@ func (handler *DBHandler) DeleteSession(session_id string) {
 	}
 }
 
-func (handler *DBHandler) GetSchoolsDetailsWhereTeacherTeaches(teacherID string) ([]*School, error) {
+func (handler *DBHandler) GetSchoolsDetailsWhereTeacherTeaches(teacherID string) ([]School, error) {
+	//We are not returning pointers, because Go templates could not handle them at the moment.
 
 	query := "SELECT * FROM get_schools_details_where_teacher_teaches(" + teacherID + ");"
 	fmt.Println(query)
@@ -101,7 +102,7 @@ func (handler *DBHandler) GetSchoolsDetailsWhereTeacherTeaches(teacherID string)
 		return nil, ErrCouldNotGetRows
 	}
 
-	schools := make([]*School, 1)
+	schools := make([]School, 0)
 
 	for rows.Next() {
 		var id int
@@ -114,7 +115,7 @@ func (handler *DBHandler) GetSchoolsDetailsWhereTeacherTeaches(teacherID string)
 		if err != nil {
 			log.Print(err)
 		}
-		school := &School{Id: id, FullName: fullName, City: city, Street: street, SchoolType: schoolType}
+		school := School{Id: id, FullName: fullName, City: city, Street: street, SchoolType: schoolType}
 		//DEBUG
 		fmt.Println(school)
 		schools = append(schools, school)
