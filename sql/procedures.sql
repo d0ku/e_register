@@ -245,8 +245,9 @@ CREATE OR REPLACE FUNCTION get_schools_details_where_teacher_teaches(IN teacher_
     AS $$ 
 BEGIN
     RETURN QUERY 
-    SELECT Schools.id_school, Schools.full_name, Addresses.city, Addresses.street, Schools.typ FROM 
-    Schools INNER JOIN TeachersSchools ON (Schools.id_school=TeachersSchools.id_school) INNER JOIN Addresses ON (Schools.id_address=Addresses.id_address)
+    SELECT Schools.id_school, Schools.full_name, Addresses.city, Addresses.street, Schools.typ 
+    FROM Schools INNER JOIN TeachersSchools ON (Schools.id_school=TeachersSchools.id_school)
+    INNER JOIN Addresses ON (Schools.id_address=Addresses.id_address)
     WHERE id_teacher=teacher_id;
 END
 $$ language plpgsql;
