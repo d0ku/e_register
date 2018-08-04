@@ -13,18 +13,26 @@ import (
 
 var (
 	//DbHandler is globally available handler for database, should be only one entry point to DB in whole app.
-	DbHandler *DBHandler
+	DbHandler DBHandler
 
 	//ErrCouldNotGetRows is returned when there is a problem with querying
 	ErrCouldNotGetRows = errors.New("Could not get rows")
 )
 
-type DBHandler struct {
+//DBHandler defines default interactions with db.
+type DBHandler interface {
+	CheckUserLogin(string, string, string) *UserLoginData
+	CheckIfTeacherIsSchoolAdmin(int) int
+	GetSchoolsDetailsWhereTeacherTeaches(string) ([]School, error)
+}
+
+type dbHandlerStruct struct {
 	*sql.DB
 }
 
+//GetDatabaseHandler returns handler compliant with specified options.
 //TODO: implement specyfing remote server address for SQL connection.
-func GetDatabaseHandler(username string, dbName string, dbPassword string, sslmode string) (*DBHandler, error) {
+func GetDatabaseHandler(username string, dbName string, dbPassword string, sslmode string) (DBHandler, error) {
 	var err error
 	//TODO: connect to postgres by SSL (sslmode=verify-full)
 
@@ -40,23 +48,25 @@ func GetDatabaseHandler(username string, dbName string, dbPassword string, sslmo
 		return nil, err
 	}
 
-	return &DBHandler{dbConnection}, nil
+	handler := &dbHandlerStruct{dbConnection}
+
+	return DBHandler(handler), nil
 }
 
-func (handler *DBHandler) CheckUserLogin(username string, password string, userType string) *UserLoginData {
+func (handler *dbHandlerStruct) CheckUserLogin(username string, password string, userType string) *UserLoginData {
 	query := "SELECT * FROM check_login_data('" + username + "','" + password + "','" + userType + "');"
 	fmt.Println(query)
 	var exists bool
-	var user_type string
+	var userTypeOut string
 	var id int
-	err := handler.QueryRow(query).Scan(&exists, &user_type, &id)
+	err := handler.QueryRow(query).Scan(&exists, &userTypeOut, &id)
 	if err != nil {
 		log.Print(err)
 	}
-	return &UserLoginData{exists, user_type, id}
+	return &UserLoginData{exists, userTypeOut, id}
 }
 
-func (handler *DBHandler) CheckIfTeacherIsSchoolAdmin(teacherID int) int {
+func (handler *dbHandlerStruct) CheckIfTeacherIsSchoolAdmin(teacherID int) int {
 	fmt.Println(teacherID)
 	query := "SELECT * FROM check_if_teacher_is_school_admin(" + strconv.Itoa(teacherID) + ");"
 	fmt.Println(query)
@@ -70,27 +80,7 @@ func (handler *DBHandler) CheckIfTeacherIsSchoolAdmin(teacherID int) int {
 	return output
 }
 
-func (handler *DBHandler) AddSession(session_id string, username string) bool {
-	var result bool
-	query := "SELECT add_session('" + session_id + "','" + username + "');"
-	fmt.Println(query)
-	err := handler.QueryRow(query).Scan(&result)
-	if err != nil {
-		log.Print(err)
-	}
-	return result
-}
-
-func (handler *DBHandler) DeleteSession(session_id string) {
-	query := "SELECT delete_session('" + session_id + "');"
-	fmt.Println(query)
-	err := handler.QueryRow(query)
-	if err != nil {
-		log.Print(err)
-	}
-}
-
-func (handler *DBHandler) GetSchoolsDetailsWhereTeacherTeaches(teacherID string) ([]School, error) {
+func (handler *dbHandlerStruct) GetSchoolsDetailsWhereTeacherTeaches(teacherID string) ([]School, error) {
 	//We are not returning pointers, because Go templates could not handle them at the moment.
 
 	query := "SELECT * FROM get_schools_details_where_teacher_teaches(" + teacherID + ");"

@@ -12,11 +12,13 @@ var (
 	database = flag.Bool("database", false, "run database integration tests")
 )
 
-var dbHandler *databasehandling.DBHandler
+var dbHandler databasehandling.DBHandler
 
+/*
 func teardown() {
 	DBAddUserTeardown()
 }
+*/
 
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -29,18 +31,20 @@ func TestMain(m *testing.M) {
 
 		result := m.Run()
 
-		teardown()
+		//		teardown()
 		os.Exit(result)
 	} else {
 		os.Exit(0)
 	}
 }
 
+/*
 func TestDBAddUser(t *testing.T) {
 	DBAddUserTeardown() //remove all possible before stuff.
 	//TODO: write test.
 	DBAddUserTeardown()
 }
+
 
 func DBAddUserTeardown() {
 	dbHandler.QueryRow("DELETE FROM Users WHERE username='1234adduser';")
@@ -62,3 +66,4 @@ func TestDBCheckLoginData(t *testing.T) {
 		t.Errorf("User id was not scanned properly")
 	}
 }
+*/
