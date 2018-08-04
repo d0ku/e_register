@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/d0ku/e_register/core/logging"
 	"github.com/d0ku/e_register/core/sessions"
 )
 
@@ -187,4 +189,19 @@ func TestRedirectWithErrorToLoginValidSession(t *testing.T) {
 	if string(bodyContent) != "test_string" {
 		t.Error("Request was redirected but it should not be.")
 	}
+}
+
+func TestRoutingLogin(t *testing.T) {
+	mux := logging.GetMux(http.NewServeMux())
+	Initialize("../../page/", 150, mux)
+
+	req, err := http.NewRequest("GET", "/main", nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handler, pattern := mux.Handler(req)
+	fmt.Println(handler)
+	fmt.Println(pattern)
 }
