@@ -76,6 +76,9 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//getDataToChoose returns appropriate data basing on provided userType and userID.
+//It errors out only when there was some error in databasehandling.
+//It returns empty array if no data is associated with user.
 func getDataToChoose(userType string, userID string) ([]databasehandling.School, error) {
 	//Return schools in case of teachers and admins, children in case of parents and class in case of student.
 	var schools []databasehandling.School
@@ -95,16 +98,19 @@ func getDataToChoose(userType string, userID string) ([]databasehandling.School,
 	return schools, err
 }
 
+//Gets called when client requests /main/schoolAdmin/{school_id}
 func mainHandleSchoolAdmin(w http.ResponseWriter, r *http.Request) {
 	log.Print("ADMIN")
 
 }
 
+//Gets called when client requests /main/parent/{student_id} where {student_id} is id of one of its child.
 func mainHandleParent(w http.ResponseWriter, r *http.Request) {
 	log.Print("PARENT")
 
 }
 
+//Gets called when client requests /main/parent/{student_id}
 func mainHandleStudent(w http.ResponseWriter, r *http.Request) {
 	log.Print("STUDENT")
 
@@ -116,71 +122,7 @@ type chooseSchoolTemplateParse struct {
 	UserName string
 }
 
-/*
-func returnSchoolsList(w http.ResponseWriter, r *http.Request) ([]databasehandling.School, error) {
-	var err error
-	var schools []databasehandling.School
-
-	session, err := getSessionFromRequest(w, r)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil, err
-	}
-
-	switch session.Data["user_type"] {
-	case "teacher":
-		schools, err = databasehandling.DbHandler.GetSchoolsDetailsWhereTeacherTeaches(session.Data["id"])
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return schools, nil
-}
-*/
-
-/*
-func handleTeacherChooseSchool(w http.ResponseWriter, r *http.Request) {
-	log.Print("TEACHER")
-	session, err := getSessionFromRequest(w, r)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//Display window to let teacher choose school he wants to see (ha has to teach in them).
-
-	schools, err := databasehandling.DbHandler.GetSchoolsDetailsWhereTeacherTeaches(session.Data["id"])
-
-	if len(schools) == 0 {
-		w.Write([]byte("Nie jesteś dodany do żadnej szkoły!"))
-		return
-	}
-
-	if len(schools) == 1 {
-		//TODO: Is this correct status?
-		http.Redirect(w, r, "/main/teacher/"+strconv.FormatInt(int64(schools[0].Id), 10), http.StatusSeeOther)
-		return
-	}
-
-	if err != nil {
-		log.Print(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	templateData := chooseSchoolTemplateParse{schools, session.Data["user_type"], session.Data["username"]}
-	err = templates["choose_school.gtpl"].Execute(w, templateData)
-
-	if err != nil {
-		log.Print(err)
-	}
-}
-*/
-
+//Gets called when client requests /main/teacher/{school_id}
 func mainHandleTeacher(w http.ResponseWriter, r *http.Request) {
 	fields := strings.Split(r.RequestURI, "/")
 	schoolID := fields[len(fields)-1]
