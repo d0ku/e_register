@@ -2,6 +2,7 @@ package databasehandling
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -13,6 +14,9 @@ import (
 var (
 	//DbHandler is globally available handler for database, should be only one entry point to DB in whole app.
 	DbHandler *DBHandler
+
+	//ErrCouldNotGetRows is returned when there is a problem with querying
+	ErrCouldNotGetRows = errors.New("Could not get rows")
 )
 
 type DBHandler struct {
@@ -37,12 +41,6 @@ func GetDatabaseHandler(username string, dbName string, dbPassword string, sslmo
 	}
 
 	return &DBHandler{dbConnection}, nil
-}
-
-type UserLoginData struct {
-	Exists    bool
-	User_type string
-	Id        int
 }
 
 func (handler *DBHandler) CheckUserLogin(username string, password string, userType string) *UserLoginData {
@@ -90,4 +88,37 @@ func (handler *DBHandler) DeleteSession(session_id string) {
 	if err != nil {
 		log.Print(err)
 	}
+}
+
+func (handler *DBHandler) GetSchoolsDetailsWhereTeacherTeaches(teacherID string) ([]*School, error) {
+
+	query := "SELECT * FROM get_schools_details_where_teacher_teaches(" + teacherID + ");"
+	fmt.Println(query)
+
+	rows, err := handler.Query(query)
+	if err != nil {
+		log.Print(err)
+		return nil, ErrCouldNotGetRows
+	}
+
+	schools := make([]*School, 1)
+
+	for rows.Next() {
+		var id int
+		var fullName string
+		var city string
+		var street string
+		var schoolType string
+
+		err := rows.Scan(&id, &fullName, &city, &street, &schoolType)
+		if err != nil {
+			log.Print(err)
+		}
+		school := &School{Id: id, FullName: fullName, City: city, Street: street, SchoolType: schoolType}
+		//DEBUG
+		fmt.Println(school)
+		schools = append(schools, school)
+	}
+
+	return schools, nil
 }

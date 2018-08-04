@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -151,12 +152,15 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				sessionID := sessionManager.GetSessionID(username)
 
 				//We add information about user type (basically as which the user has authenticated) to session.
+				//Also we add id information.
 				session, err := sessionManager.GetSession(sessionID)
 				if err != nil {
 					//There is literally no way for this to error out, but we check it anyway.
 					log.Print(err)
 				} else {
 					session.Data["user_type"] = userLoginTry.UserType
+					idStr := strconv.FormatInt(int64(user.Id), 10)
+					session.Data["id"] = idStr
 				}
 
 				//Send cookie with defined expiration time and sessionID value to user.

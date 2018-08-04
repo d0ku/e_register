@@ -5,6 +5,8 @@ package handlers
 import (
 	"log"
 	"net/http"
+
+	"github.com/d0ku/e_register/core/databasehandling"
 )
 
 /*
@@ -53,6 +55,12 @@ func mainHandleStudent(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type chooseSchoolTemplateParse struct {
+	Schools  []*databasehandling.School
+	UserType string
+	UserName string
+}
+
 func mainHandleTeacher(w http.ResponseWriter, r *http.Request) {
 	log.Print("TEACHER")
 	session, err := getSessionFromRequest(w, r)
@@ -62,9 +70,19 @@ func mainHandleTeacher(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = templates["index.gtpl"].Execute(w, session.Data["username"])
+	//Display window to let teacher choose school he wants to see (ha has to teach in them).
+
+	schools, err := databasehandling.DbHandler.GetSchoolsDetailsWhereTeacherTeaches(session.Data["id"])
 	if err != nil {
+		log.Print(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	templateData := chooseSchoolTemplateParse{schools, session.Data["user_type"], session.Data["username"]}
+	err = templates["choose_school.gtpl"].Execute(w, templateData)
+
+	if err != nil {
 		log.Print(err)
 	}
 }
