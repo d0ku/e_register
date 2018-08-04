@@ -60,7 +60,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := sessionManager.GetSession(cookie.Value)
+	_, err = sessionManager.GetSession(cookie.Value)
 
 	if err != nil {
 		//User tried to log in with expired cookie or he is trying to do something malicious.
@@ -77,7 +77,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 
 	//If logged user tries to access /login page, we redirect him to /main.
 
-	http.Redirect(w, r, "/main/"+session.Data["user_type"], http.StatusSeeOther)
+	http.Redirect(w, r, "/main/", http.StatusSeeOther)
 }
 
 func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *sessions.LoginTriesController) http.Handler {
@@ -170,7 +170,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				http.SetCookie(w, cookie)
 
 				//Redirect user to main.
-				http.Redirect(w, r, "/main/"+session.Data["user_type"], http.StatusSeeOther)
+				http.Redirect(w, r, "/main/", http.StatusSeeOther)
 			}
 		}
 	})

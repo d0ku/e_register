@@ -111,12 +111,14 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging
 	//Create fileServer to deliver static content.
 	fileServer := http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))
 
+	///main/{user_type}/{school_id}
 	mux.Handle("/login", loginHandlerDecorator(cookieLifeTime, loginController))
 	mux.Handle("/logout", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(logoutHandler)))
-	mux.Handle("/main/teacher", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleTeacher)))
-	mux.Handle("/main/student", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleStudent)))
-	mux.Handle("/main/schoolAdmin", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleSchoolAdmin)))
-	mux.Handle("/main/parent", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleParent)))
+	mux.Handle("/main/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandler)))
+	mux.Handle("/main/teacher/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleTeacher)))
+	mux.Handle("/main/student/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleStudent)))
+	mux.Handle("/main/schoolAdmin/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleSchoolAdmin)))
+	mux.Handle("/main/parent/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleParent)))
 	mux.Handle("/login/", http.HandlerFunc(loginUsers))
 	mux.Handle("/", http.HandlerFunc(redirectToLogin))
 	mux.Handle("/page/", fileServer)
