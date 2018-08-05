@@ -101,8 +101,8 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusMovedPermanently)
 }
 
-//TODO: Permission checkers should check more details.
-func (app *AppContext) checkStudentPermissions(h http.Handler) http.Handler {
+func (app *AppContext) checkPermission(h http.Handler, userTypeIn string) http.Handler {
+	//TODO: that checker is really simple, add more stuff.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, err := app.getSessionFromRequest(w, r)
 		if err != nil {
@@ -117,7 +117,7 @@ func (app *AppContext) checkStudentPermissions(h http.Handler) http.Handler {
 
 		userType, ok := session.Data["user_type"]
 
-		if !ok || userType != "student" {
+		if !ok || userType != userTypeIn {
 			app.templates["no_permission.gtpl"].Execute(w, userType)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -126,84 +126,7 @@ func (app *AppContext) checkStudentPermissions(h http.Handler) http.Handler {
 		}
 		h.ServeHTTP(w, r)
 	})
-}
 
-func (app *AppContext) checkParentPermissions(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := app.getSessionFromRequest(w, r)
-		if err != nil {
-			log.Print(err)
-			app.templates["not_logged.gtpl"].Execute(w, nil)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-
-			return
-		}
-
-		userType, ok := session.Data["user_type"]
-
-		if !ok || userType != "parent" {
-			app.templates["no_permission.gtpl"].Execute(w, userType)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
-func (app *AppContext) checkSchoolAdminPermissions(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := app.getSessionFromRequest(w, r)
-		if err != nil {
-			log.Print(err)
-			app.templates["not_logged.gtpl"].Execute(w, nil)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-
-			return
-		}
-
-		userType, ok := session.Data["user_type"]
-
-		if !ok || userType != "schoolAdmin" {
-			app.templates["no_permission.gtpl"].Execute(w, userType)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
-func (app *AppContext) checkTeacherPermissions(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := app.getSessionFromRequest(w, r)
-		if err != nil {
-			log.Print(err)
-			app.templates["not_logged.gtpl"].Execute(w, nil)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-
-			return
-		}
-
-		userType, ok := session.Data["user_type"]
-
-		if !ok || userType != "teacher" {
-			app.templates["no_permission.gtpl"].Execute(w, userType)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
 }
 
 //Initialize assigns handlers to provided mux and sets up sessionManager with provided session life time.
@@ -228,10 +151,10 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging
 	mux.Handle("/login", appContext.loginHandlerDecorator(cookieLifeTime, loginController))
 	mux.Handle("/logout", appContext.checkUserLogon(http.HandlerFunc(appContext.logoutHandler)))
 	mux.Handle("/main/", appContext.checkUserLogon(http.HandlerFunc(appContext.mainHandler)))
-	mux.Handle("/main/teacher/", appContext.checkTeacherPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleTeacher))))
-	mux.Handle("/main/student/", appContext.checkStudentPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleStudent))))
-	mux.Handle("/main/schoolAdmin/", appContext.checkSchoolAdminPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleSchoolAdmin))))
-	mux.Handle("/main/parent/", appContext.checkParentPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleParent))))
+	mux.Handle("/main/teacher/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleTeacher)), "teacher"))
+	mux.Handle("/main/student/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleStudent)), "student"))
+	mux.Handle("/main/schoolAdmin/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleSchoolAdmin)), "schoolAdmin"))
+	mux.Handle("/main/parent/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleParent)), "parent"))
 	mux.Handle("/login/", http.HandlerFunc(appContext.loginUsers))
 	mux.Handle("/", http.HandlerFunc(redirectToLogin))
 	mux.Handle("/page/", fileServer)
