@@ -13,15 +13,18 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/d0ku/e_register/core/databasehandling"
 	"github.com/d0ku/e_register/core/logging"
 	"github.com/d0ku/e_register/core/sessions"
 )
 
-var (
-	sessionManager *sessions.SessionManager
-	//templates contains parsed HTML templates.
-	templates map[string]*template.Template
+type AppContext struct {
+	sessionManager sessions.SessionManager
+	templates      map[string]*template.Template
+	DbHandler      databasehandling.DBHandler
+}
 
+var (
 	//ErrNoSuchSession is returned when request contains sessionID cookie, but sessionManager can't find it.
 	ErrNoSuchSession = errors.New("Session with such sessionID does not exist")
 	//ErrNoSuchSessionCookie is returned when request does not contain sessionID cookie.
@@ -32,13 +35,13 @@ var (
 //- no cookie at all
 //- incorrect cookie
 //and deletes cookie from client side in that case.
-func getSessionFromRequest(w http.ResponseWriter, r *http.Request) (*sessions.Session, error) {
+func (app *AppContext) getSessionFromRequest(w http.ResponseWriter, r *http.Request) (*sessions.Session, error) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		return nil, ErrNoSuchSessionCookie
 	}
 
-	session, err := sessionManager.GetSession(cookie.Value)
+	session, err := app.sessionManager.GetSession(cookie.Value)
 
 	if err != nil {
 		//Delete cookie which is not recognized on server side.
@@ -50,8 +53,8 @@ func getSessionFromRequest(w http.ResponseWriter, r *http.Request) (*sessions.Se
 	return session, nil
 }
 
-func parseAllTemplates(pageFolder string) {
-	templates = make(map[string]*template.Template)
+func parseAllTemplates(pageFolder string) map[string]*template.Template {
+	templates := make(map[string]*template.Template)
 
 	templateFiles, err := ioutil.ReadDir(pageFolder)
 	if err != nil {
@@ -73,15 +76,17 @@ func parseAllTemplates(pageFolder string) {
 		}
 	}
 	log.Print("TEMPLATES|Parsing finished...")
+
+	return templates
 }
 
-func redirectToLoginPageIfUserNotLogged(h http.Handler, messagePorts ...string) http.Handler {
+func (app *AppContext) checkUserLogon(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := getSessionFromRequest(w, r)
+		_, err := app.getSessionFromRequest(w, r)
 
 		if err != nil {
 			log.Print("LOGIN|User from: " + r.RemoteAddr + " tried to access app page without privileges.")
-			templates["not_logged.gtpl"].Execute(w, nil)
+			app.templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -97,12 +102,12 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 //TODO: Permission checkers should check more details.
-func checkStudentPermissions(h http.Handler) http.Handler {
+func (app *AppContext) checkStudentPermissions(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := getSessionFromRequest(w, r)
+		session, err := app.getSessionFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
-			templates["not_logged.gtpl"].Execute(w, nil)
+			app.templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -113,7 +118,7 @@ func checkStudentPermissions(h http.Handler) http.Handler {
 		userType, ok := session.Data["user_type"]
 
 		if !ok || userType != "student" {
-			templates["no_permission.gtpl"].Execute(w, userType)
+			app.templates["no_permission.gtpl"].Execute(w, userType)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -123,12 +128,12 @@ func checkStudentPermissions(h http.Handler) http.Handler {
 	})
 }
 
-func checkParentPermissions(h http.Handler) http.Handler {
+func (app *AppContext) checkParentPermissions(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := getSessionFromRequest(w, r)
+		session, err := app.getSessionFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
-			templates["not_logged.gtpl"].Execute(w, nil)
+			app.templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -139,7 +144,7 @@ func checkParentPermissions(h http.Handler) http.Handler {
 		userType, ok := session.Data["user_type"]
 
 		if !ok || userType != "parent" {
-			templates["no_permission.gtpl"].Execute(w, userType)
+			app.templates["no_permission.gtpl"].Execute(w, userType)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -149,12 +154,12 @@ func checkParentPermissions(h http.Handler) http.Handler {
 	})
 }
 
-func checkSchoolAdminPermissions(h http.Handler) http.Handler {
+func (app *AppContext) checkSchoolAdminPermissions(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := getSessionFromRequest(w, r)
+		session, err := app.getSessionFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
-			templates["not_logged.gtpl"].Execute(w, nil)
+			app.templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -165,7 +170,7 @@ func checkSchoolAdminPermissions(h http.Handler) http.Handler {
 		userType, ok := session.Data["user_type"]
 
 		if !ok || userType != "schoolAdmin" {
-			templates["no_permission.gtpl"].Execute(w, userType)
+			app.templates["no_permission.gtpl"].Execute(w, userType)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -175,12 +180,12 @@ func checkSchoolAdminPermissions(h http.Handler) http.Handler {
 	})
 }
 
-func checkTeacherPermissions(h http.Handler) http.Handler {
+func (app *AppContext) checkTeacherPermissions(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := getSessionFromRequest(w, r)
+		session, err := app.getSessionFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
-			templates["not_logged.gtpl"].Execute(w, nil)
+			app.templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -191,7 +196,7 @@ func checkTeacherPermissions(h http.Handler) http.Handler {
 		userType, ok := session.Data["user_type"]
 
 		if !ok || userType != "teacher" {
-			templates["no_permission.gtpl"].Execute(w, userType)
+			app.templates["no_permission.gtpl"].Execute(w, userType)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -203,12 +208,12 @@ func checkTeacherPermissions(h http.Handler) http.Handler {
 
 //Initialize assigns handlers to provided mux and sets up sessionManager with provided session life time.
 //It also parses all HTML templates located under templatesPath.
-func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging.MuxController) {
+func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging.MuxController, db databasehandling.DBHandler) {
 	//Parse all HTML templates from provided directory.
-	parseAllTemplates(templatesPath)
+	templates := parseAllTemplates(templatesPath)
 
 	//Initialize session manager.
-	sessionManager = sessions.GetSessionManager(32, cookieLifeTime)
+	sessionManager := sessions.GetSessionManager(32, cookieLifeTime)
 
 	//Initialize timeouts after too many login tries module.
 	loginController := sessions.GetLoginTriesController()
@@ -216,15 +221,18 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging
 	//Create fileServer to deliver static content.
 	fileServer := http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))
 
+	//TODO: pass arguments in different way
+	appContext := &AppContext{sessionManager, templates, db}
+
 	///main/{user_type}/{school_id}
-	mux.Handle("/login", loginHandlerDecorator(cookieLifeTime, loginController))
-	mux.Handle("/logout", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(logoutHandler)))
-	mux.Handle("/main/", redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandler)))
-	mux.Handle("/main/teacher/", checkTeacherPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleTeacher))))
-	mux.Handle("/main/student/", checkStudentPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleStudent))))
-	mux.Handle("/main/schoolAdmin/", checkSchoolAdminPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleSchoolAdmin))))
-	mux.Handle("/main/parent/", checkParentPermissions(redirectToLoginPageIfUserNotLogged(http.HandlerFunc(mainHandleParent))))
-	mux.Handle("/login/", http.HandlerFunc(loginUsers))
+	mux.Handle("/login", appContext.loginHandlerDecorator(cookieLifeTime, loginController))
+	mux.Handle("/logout", appContext.checkUserLogon(http.HandlerFunc(appContext.logoutHandler)))
+	mux.Handle("/main/", appContext.checkUserLogon(http.HandlerFunc(appContext.mainHandler)))
+	mux.Handle("/main/teacher/", appContext.checkTeacherPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleTeacher))))
+	mux.Handle("/main/student/", appContext.checkStudentPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleStudent))))
+	mux.Handle("/main/schoolAdmin/", appContext.checkSchoolAdminPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleSchoolAdmin))))
+	mux.Handle("/main/parent/", appContext.checkParentPermissions(appContext.checkUserLogon(http.HandlerFunc(mainHandleParent))))
+	mux.Handle("/login/", http.HandlerFunc(appContext.loginUsers))
 	mux.Handle("/", http.HandlerFunc(redirectToLogin))
 	mux.Handle("/page/", fileServer)
 }

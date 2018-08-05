@@ -12,8 +12,20 @@ import (
 	"github.com/d0ku/e_register/core/sessions"
 )
 
+func setUp() *AppContext {
+	//Parse all HTML templates from provided directory.
+	templates := parseAllTemplates("../../page/")
+
+	//Initialize session manager.
+	sessionManager := sessions.GetSessionManager(32, 150*time.Second)
+
+	app := &AppContext{sessionManager, templates, nil}
+
+	return app
+}
+
 func TestGetSessionFromRequestNoSuchCookie(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
+	app := setUp()
 
 	req, err := http.NewRequest("GET", "/", nil)
 
@@ -23,7 +35,7 @@ func TestGetSessionFromRequestNoSuchCookie(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	_, err = getSessionFromRequest(rec, req)
+	_, err = app.getSessionFromRequest(rec, req)
 
 	if err == nil {
 		t.Error("There is no cookie with sessionID value, so that function should error out.")
@@ -35,8 +47,7 @@ func TestGetSessionFromRequestNoSuchCookie(t *testing.T) {
 }
 
 func TestGetSessionFromRequestNoSuchSession(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
-
+	app := setUp()
 	req, err := http.NewRequest("GET", "/", nil)
 
 	cookie := &http.Cookie{Name: "sessionID", Value: "test_value"}
@@ -44,7 +55,7 @@ func TestGetSessionFromRequestNoSuchSession(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	_, err = getSessionFromRequest(rec, req)
+	_, err = app.getSessionFromRequest(rec, req)
 
 	if err == nil {
 		t.Error("There is no cookie with sessionID value, so that function should error out.")
@@ -56,9 +67,9 @@ func TestGetSessionFromRequestNoSuchSession(t *testing.T) {
 }
 
 func TestGetSessionFromRequestValidSession(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
+	app := setUp()
 
-	sessionID := sessionManager.GetSessionID("test_session")
+	sessionID := app.sessionManager.GetSessionID("test_session")
 
 	req, err := http.NewRequest("GET", "/", nil)
 
@@ -67,13 +78,13 @@ func TestGetSessionFromRequestValidSession(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	session, err := getSessionFromRequest(rec, req)
+	session, err := app.getSessionFromRequest(rec, req)
 
 	if err != nil {
 		t.Error("There should not be any errors, as sessionID cookie is valid and sessionManager knows about session.")
 	}
 
-	sessionOriginal, _ := sessionManager.GetSession(sessionID)
+	sessionOriginal, _ := app.sessionManager.GetSession(sessionID)
 
 	if session != sessionOriginal {
 		t.Error("Session returned from request is not same that was saved in cookie.")
@@ -101,8 +112,7 @@ func placeHolderHandlerFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestRedirectWithErrorToLoginNoCookie(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
-	parseAllTemplates("../../page/")
+	app := setUp()
 
 	req, err := http.NewRequest("GET", "/", nil)
 
@@ -112,7 +122,7 @@ func TestRedirectWithErrorToLoginNoCookie(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	finalHandler := redirectToLoginPageIfUserNotLogged(http.HandlerFunc(placeHolderHandlerFunc))
+	finalHandler := app.checkUserLogon(http.HandlerFunc(placeHolderHandlerFunc))
 
 	finalHandler.ServeHTTP(rec, req)
 
@@ -128,8 +138,7 @@ func TestRedirectWithErrorToLoginNoCookie(t *testing.T) {
 }
 
 func TestRedirectWithErrorToLoginNoSession(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
-	parseAllTemplates("../../page/")
+	app := setUp()
 
 	req, err := http.NewRequest("GET", "/", nil)
 
@@ -143,7 +152,7 @@ func TestRedirectWithErrorToLoginNoSession(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	finalHandler := redirectToLoginPageIfUserNotLogged(http.HandlerFunc(placeHolderHandlerFunc))
+	finalHandler := app.checkUserLogon(http.HandlerFunc(placeHolderHandlerFunc))
 
 	finalHandler.ServeHTTP(rec, req)
 
@@ -159,8 +168,7 @@ func TestRedirectWithErrorToLoginNoSession(t *testing.T) {
 }
 
 func TestRedirectWithErrorToLoginValidSession(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
-	parseAllTemplates("../../page/")
+	app := setUp()
 
 	req, err := http.NewRequest("GET", "/", nil)
 
@@ -168,7 +176,7 @@ func TestRedirectWithErrorToLoginValidSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sessionID := sessionManager.GetSessionID("placeholder")
+	sessionID := app.sessionManager.GetSessionID("placeholder")
 
 	cookie := &http.Cookie{Name: "sessionID", Value: sessionID}
 
@@ -176,7 +184,7 @@ func TestRedirectWithErrorToLoginValidSession(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	finalHandler := redirectToLoginPageIfUserNotLogged(http.HandlerFunc(placeHolderHandlerFunc))
+	finalHandler := app.checkUserLogon(http.HandlerFunc(placeHolderHandlerFunc))
 
 	finalHandler.ServeHTTP(rec, req)
 
@@ -193,7 +201,7 @@ func TestRedirectWithErrorToLoginValidSession(t *testing.T) {
 
 func TestRoutingLogin(t *testing.T) {
 	mux := logging.GetMux(http.NewServeMux())
-	Initialize("../../page/", 150, mux)
+	Initialize("../../page/", 150, mux, nil)
 
 	req, err := http.NewRequest("GET", "/main", nil)
 

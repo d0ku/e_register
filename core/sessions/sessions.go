@@ -18,8 +18,16 @@ type User struct {
 	privileges string
 }
 
-//SessionManager describes basic SessionManager for netApp.
-type SessionManager struct {
+//SessionManager is interface which defines capabilities of session manager.
+type SessionManager interface {
+	GetSessionCount() int
+	GetSession(string) (*Session, error)
+	GetSessionID(string) string
+	RemoveSession(string)
+}
+
+//SessionManagerStruct describes basic SessionManagerStruct for netApp.
+type SessionManagerStruct struct {
 	sessionsToUsers          map[string]*Session
 	SessionIDLength          int
 	SessionLifePeriodSeconds time.Duration
@@ -32,11 +40,11 @@ type Session struct {
 }
 
 //GetSessionCount returns current amount of sessions.
-func (manager *SessionManager) GetSessionCount() int {
+func (manager *SessionManagerStruct) GetSessionCount() int {
 	return len(manager.sessionsToUsers)
 }
 
-func (manager *SessionManager) removeOldSessions() {
+func (manager *SessionManagerStruct) removeOldSessions() {
 	//remove all sessions whose lifespan ended.
 	timeNow := time.Now()
 	for index, session := range manager.sessionsToUsers {
@@ -48,14 +56,16 @@ func (manager *SessionManager) removeOldSessions() {
 }
 
 //GetSessionManager returns Session Manager with properly set up attributes.
-func GetSessionManager(sessionIDLength int, lifePeriod time.Duration) *SessionManager {
-	manager := &SessionManager{sessionsToUsers: make(map[string]*Session), SessionIDLength: sessionIDLength, SessionLifePeriodSeconds: lifePeriod}
+func GetSessionManager(sessionIDLength int, lifePeriod time.Duration) SessionManager {
+	manager := &SessionManagerStruct{sessionsToUsers: make(map[string]*Session), SessionIDLength: sessionIDLength, SessionLifePeriodSeconds: lifePeriod}
 
-	return manager
+	sessionManager := SessionManager(manager)
+
+	return sessionManager
 }
 
 //GetSessionID returns unique sessionID for provided username.
-func (manager *SessionManager) GetSessionID(username string) string {
+func (manager *SessionManagerStruct) GetSessionID(username string) string {
 	generateSessionID := func(length int) string {
 		bytes := make([]byte, length)
 
@@ -83,7 +93,7 @@ func (manager *SessionManager) GetSessionID(username string) string {
 }
 
 //GetSession returns session coupled with provided sessionID.
-func (manager *SessionManager) GetSession(sessionID string) (*Session, error) {
+func (manager *SessionManagerStruct) GetSession(sessionID string) (*Session, error) {
 	session, ok := manager.sessionsToUsers[sessionID]
 
 	if !ok {
@@ -100,13 +110,13 @@ func (manager *SessionManager) GetSession(sessionID string) (*Session, error) {
 	return session, nil
 }
 
-func (manager *SessionManager) createSession(sessionID string, username string) {
+func (manager *SessionManagerStruct) createSession(sessionID string, username string) {
 	manager.removeOldSessions()
 	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.SessionLifePeriodSeconds), make(map[string]string)}
 	manager.sessionsToUsers[sessionID].Data["username"] = username
 }
 
 //RemoveSession removes session based on the provided sessionID.
-func (manager *SessionManager) RemoveSession(sessionID string) {
+func (manager *SessionManagerStruct) RemoveSession(sessionID string) {
 	delete(manager.sessionsToUsers, sessionID)
 }

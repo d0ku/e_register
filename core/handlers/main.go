@@ -12,16 +12,16 @@ import (
 	"github.com/d0ku/e_register/core/databasehandling"
 )
 
-func mainHandler(w http.ResponseWriter, r *http.Request) {
+func (app *AppContext) mainHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		session, err := getSessionFromRequest(w, r)
+		session, err := app.getSessionFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		schools, err := getDataToChoose(session.Data["user_type"], session.Data["id"])
+		schools, err := app.getDataToChoose(session.Data["user_type"], session.Data["id"])
 
 		if err != nil {
 			log.Print(err)
@@ -30,7 +30,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 		//No school/children to log into.
 		if len(schools) == 0 {
-			err := templates["no_school.gtpl"].Execute(w, nil)
+			err := app.templates["no_school.gtpl"].Execute(w, nil)
 
 			if err != nil {
 				log.Print(err)
@@ -47,7 +47,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 			templateData := chooseSchoolTemplateParse{schools, session.Data["user_type"], session.Data["username"]}
 
-			err = templates["choose_school.gtpl"].Execute(w, templateData)
+			err = app.templates["choose_school.gtpl"].Execute(w, templateData)
 
 			if err != nil {
 				log.Print(err)
@@ -79,14 +79,14 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 //getDataToChoose returns appropriate data basing on provided userType and userID.
 //It errors out only when there was some error in databasehandling.
 //It returns empty array if no data is associated with user.
-func getDataToChoose(userType string, userID string) ([]databasehandling.School, error) {
+func (app *AppContext) getDataToChoose(userType string, userID string) ([]databasehandling.School, error) {
 	//Return schools in case of teachers and admins, children in case of parents and class in case of student.
 	var schools []databasehandling.School
 	var err error
 
 	switch userType {
 	case "teacher":
-		schools, err = databasehandling.DbHandler.GetSchoolsDetailsWhereTeacherTeaches(userID)
+		schools, err = app.DbHandler.GetSchoolsDetailsWhereTeacherTeaches(userID)
 	case "schoolAdmin":
 
 	case "student":

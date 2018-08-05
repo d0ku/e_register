@@ -5,12 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/d0ku/e_register/core/sessions"
 )
 
 func TestLogOutHandlerWithCookieNoSuchSession(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
+	app := setUp()
 
 	req, err := http.NewRequest("GET", "/logout", nil)
 
@@ -24,7 +22,7 @@ func TestLogOutHandlerWithCookieNoSuchSession(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	logoutHandler(rec, req)
+	app.logoutHandler(rec, req)
 
 	cookies := rec.Result().Cookies()
 
@@ -52,11 +50,11 @@ func TestLogOutHandlerWithCookieNoSuchSession(t *testing.T) {
 }
 
 func TestLogOutHandlerWithCookieAndValidSession(t *testing.T) {
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
+	app := setUp()
 
 	req, err := http.NewRequest("GET", "/logout", nil)
 
-	sessionID := sessionManager.GetSessionID("test_data")
+	sessionID := app.sessionManager.GetSessionID("test_data")
 
 	cookie := &http.Cookie{Name: "sessionID", Value: sessionID}
 
@@ -68,7 +66,7 @@ func TestLogOutHandlerWithCookieAndValidSession(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	logoutHandler(rec, req)
+	app.logoutHandler(rec, req)
 
 	cookies := rec.Result().Cookies()
 
@@ -94,7 +92,7 @@ func TestLogOutHandlerWithCookieAndValidSession(t *testing.T) {
 		t.Error("Incorrect status code of response.")
 	}
 
-	_, err = sessionManager.GetSession(sessionID)
+	_, err = app.sessionManager.GetSession(sessionID)
 
 	if err == nil {
 		t.Error("Session was not correctly removed from sessionManager and still can be found after log out.")
@@ -102,8 +100,7 @@ func TestLogOutHandlerWithCookieAndValidSession(t *testing.T) {
 }
 
 func TestLogOutHandlerWithoutCookie(t *testing.T) {
-	parseAllTemplates("../../page/")
-	sessionManager = sessions.GetSessionManager(64, 120*time.Second)
+	app := setUp()
 
 	req, err := http.NewRequest("GET", "/logout", nil)
 
@@ -113,7 +110,7 @@ func TestLogOutHandlerWithoutCookie(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	logoutHandler(rec, req)
+	app.logoutHandler(rec, req)
 
 	if rec.Code != http.StatusFound {
 		t.Error("Incorrect status code of response.")

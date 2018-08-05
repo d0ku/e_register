@@ -8,18 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/d0ku/e_register/core/databasehandling"
 	"github.com/d0ku/e_register/core/sessions"
 )
 
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
+func (app *AppContext) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sessionID")
 
 	if err != nil {
 		//No cookie found, nothing to do except redirect.
 	} else {
 
-		session, err := sessionManager.GetSession(cookie.Value)
+		session, err := app.sessionManager.GetSession(cookie.Value)
 		if err != nil {
 			log.Print(err)
 		} else {
@@ -29,30 +28,30 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 		//Delete cookie and redirect to login.
 		cookie.Expires = time.Unix(0, 0)
 		http.SetCookie(w, cookie)
-		sessionManager.RemoveSession(cookie.Value)
+		app.sessionManager.RemoveSession(cookie.Value)
 	}
 
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
-func loginUsers(w http.ResponseWriter, r *http.Request) {
+func (app *AppContext) loginUsers(w http.ResponseWriter, r *http.Request) {
 	fields := strings.Split(r.RequestURI, "/")
 	userType := fields[len(fields)-1]
 
 	//Execute template with correct value to be set as hidden attribute in HTML form.
-	err := templates["login_form.gtpl"].Execute(w, userType)
+	err := app.templates["login_form.gtpl"].Execute(w, userType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Print(err)
 	}
 }
 
-func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
+func (app *AppContext) loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sessionID")
 	if err != nil {
 		//User is not logged in, cookie does not exist, normal use-case.
 
-		err := templates["login.gtpl"].Execute(w, nil)
+		err := app.templates["login.gtpl"].Execute(w, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Print(err)
@@ -60,7 +59,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = sessionManager.GetSession(cookie.Value)
+	_, err = app.sessionManager.GetSession(cookie.Value)
 
 	if err != nil {
 		//User tried to log in with expired cookie or he is trying to do something malicious.
@@ -71,7 +70,7 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, cookie)
 
 		//Show user information page saying that he is not logged in.
-		templates["not_logged.gtpl"].Execute(w, nil)
+		app.templates["not_logged.gtpl"].Execute(w, nil)
 		return
 	}
 
@@ -80,10 +79,10 @@ func loginHandlerGET(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/main/", http.StatusSeeOther)
 }
 
-func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *sessions.LoginTriesController) http.Handler {
+func (app *AppContext) loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *sessions.LoginTriesController) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
-			loginHandlerGET(w, r)
+			app.loginHandlerGET(w, r)
 		} else { //POST request.
 			r.ParseForm()
 			//Validate data, and check whether it can be used to log into database.
@@ -101,7 +100,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				checkSchool = true
 			}
 
-			user := databasehandling.DbHandler.CheckUserLogin(username, password, userType)
+			user := app.DbHandler.CheckUserLogin(username, password, userType)
 
 			if !user.Exists {
 				loginTriesController.AddTry(r.RemoteAddr)
@@ -112,7 +111,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				}
 
 				log.Print("LOGIN|Unsuccessful try to log in from:" + r.RemoteAddr)
-				err := templates["login_error.gtpl"].Execute(w, userLoginTry)
+				err := app.templates["login_error.gtpl"].Execute(w, userLoginTry)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					log.Print(err)
@@ -120,7 +119,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 
 			} else {
 				if checkSchool {
-					schoolID := databasehandling.DbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
+					schoolID := app.DbHandler.CheckIfTeacherIsSchoolAdmin(user.Id)
 					if schoolID == -1 {
 						//There is no schoolAdmin with such id.
 
@@ -133,7 +132,7 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 						}
 
 						//When teacher tries to login as admin, he gets same error message as if his username and password didn't match. That's the case after all.
-						err := templates["login_error.gtpl"].Execute(w, userLoginTry)
+						err := app.templates["login_error.gtpl"].Execute(w, userLoginTry)
 						if err != nil {
 							http.Error(w, err.Error(), http.StatusInternalServerError)
 							log.Print(err)
@@ -149,11 +148,11 @@ func loginHandlerDecorator(cookieLifeTime time.Duration, loginTriesController *s
 				log.Print("LOGIN|Logon as: " + username + " from:" + r.RemoteAddr)
 
 				//We always create new session for users who don't have valid cookies.
-				sessionID := sessionManager.GetSessionID(username)
+				sessionID := app.sessionManager.GetSessionID(username)
 
 				//We add information about user type (basically as which the user has authenticated) to session.
 				//Also we add id information.
-				session, err := sessionManager.GetSession(sessionID)
+				session, err := app.sessionManager.GetSession(sessionID)
 				if err != nil {
 					//There is literally no way for this to error out, but we check it anyway.
 					log.Print(err)

@@ -13,7 +13,7 @@ import (
 	"github.com/d0ku/e_register/core/server"
 )
 
-func setUpDatabaseConnection(config map[string]string) {
+func setUpDatabaseConnection(config map[string]string) databasehandling.DBHandler {
 	//TODO: maybe just provide connection string from here?
 	//Create dbHandler object.
 	temp, err := databasehandling.GetDatabaseHandler(config["db_username"], config["db_name"], config["db_password"], config["db_sslmode"])
@@ -23,17 +23,17 @@ func setUpDatabaseConnection(config map[string]string) {
 
 	//If no errors were thrown, assign this object as global database handler.
 
-	databasehandling.DbHandler = temp
+	return temp
 }
 
-func setUpHTTPHandlers(config map[string]string) {
+func setUpHTTPHandlers(config map[string]string, db databasehandling.DBHandler) {
 	temp, err := strconv.Atoi(config["cookie_life_time"])
 	if err != nil {
 		log.Panic("Could not parse cookie_life_time value.")
 	}
 
 	cookieLifeTime := time.Duration(temp) * time.Second
-	handlers.Initialize(config["web_assets_path"], cookieLifeTime, server.MainServerMux)
+	handlers.Initialize(config["web_assets_path"], cookieLifeTime, server.MainServerMux, db)
 }
 
 func setUpAndRunServer(config map[string]string) {
@@ -107,7 +107,7 @@ func main() {
 
 	parseConfigFile(configPath, config)
 
-	setUpDatabaseConnection(config)
-	setUpHTTPHandlers(config)
+	db := setUpDatabaseConnection(config)
+	setUpHTTPHandlers(config, db)
 	setUpAndRunServer(config)
 }

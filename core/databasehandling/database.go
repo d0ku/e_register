@@ -12,9 +12,6 @@ import (
 )
 
 var (
-	//DbHandler is globally available handler for database, should be only one entry point to DB in whole app.
-	DbHandler DBHandler
-
 	//ErrCouldNotGetRows is returned when there is a problem with querying
 	ErrCouldNotGetRows = errors.New("Could not get rows")
 )
