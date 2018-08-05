@@ -8,9 +8,6 @@ import (
 	"github.com/d0ku/e_register/core/logging"
 )
 
-//MainServerMux is object to which all handlers should be added.
-var MainServerMux = logging.GetMux(http.NewServeMux())
-
 func redirectToHTTPS(h http.Handler, ports ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -29,10 +26,10 @@ func placeHolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //GetTLSServer returns server with set up Port.
-func GetTLSServer(HTTPSPort string) *http.Server {
+func GetTLSServer(HTTPSPort string, mux http.Handler) *http.Server {
 	server := &http.Server{
 		Addr:    ":" + HTTPSPort,
-		Handler: MainServerMux,
+		Handler: mux,
 	}
 
 	return server

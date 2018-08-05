@@ -23,7 +23,8 @@ var (
 )
 
 func TestHTTPToHTTPSRedirect(t *testing.T) {
-	serverHTTPS := server.GetTLSServer(testHTTPSPort)
+	mux := http.NewServeMux()
+	serverHTTPS := server.GetTLSServer(testHTTPSPort, mux)
 	go serverHTTPS.ListenAndServeTLS(testCrt, testPrivKey)
 	defer serverHTTPS.Close()
 
@@ -45,7 +46,8 @@ func TestHTTPToHTTPSRedirect(t *testing.T) {
 }
 
 func TestHTTPToHTTPSRedirectDisabled(t *testing.T) {
-	serverHTTPS := server.GetTLSServer(testHTTPSPort)
+	mux := http.NewServeMux()
+	serverHTTPS := server.GetTLSServer(testHTTPSPort, mux)
 
 	go serverHTTPS.ListenAndServeTLS(testCrt, testPrivKey)
 	defer serverHTTPS.Close()
