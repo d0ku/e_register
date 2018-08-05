@@ -118,5 +118,11 @@ func (manager *SessionManagerStruct) createSession(sessionID string, username st
 
 //RemoveSession removes session based on the provided sessionID.
 func (manager *SessionManagerStruct) RemoveSession(sessionID string) {
-	delete(manager.sessionsToUsers, sessionID)
+	session, err := manager.GetSession(sessionID)
+	if err != nil {
+
+	} else {
+		log.Print("Removed session of user:" + session.Data["user_name"])
+		delete(manager.sessionsToUsers, sessionID)
+	}
 }
