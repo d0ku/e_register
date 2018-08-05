@@ -19,7 +19,7 @@ func setUp() *AppContext {
 	//Initialize session manager.
 	sessionManager := sessions.GetSessionManager(32, 150*time.Second)
 
-	app := &AppContext{sessionManager, templates, nil}
+	app := &AppContext{sessionManager, templates, nil, 150 * time.Second, sessions.GetLoginTriesController()}
 
 	return app
 }
@@ -196,6 +196,136 @@ func TestRedirectWithErrorToLoginValidSession(t *testing.T) {
 	//It means request was redirected to not_logged page.
 	if string(bodyContent) != "test_string" {
 		t.Error("Request was redirected but it should not be.")
+	}
+}
+
+func testHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("it_works"))
+}
+
+func TestCheckPermissionShouldBeGranted(t *testing.T) {
+	app := setUp()
+
+	sessionID := app.sessionManager.GetSessionID("test_data")
+	session, err := app.sessionManager.GetSession(sessionID)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	session.Data["user_type"] = "teacher"
+
+	finalHandler := app.checkPermission(http.HandlerFunc(testHandler), "teacher")
+
+	req, err := http.NewRequest("GET", "/main/teacher/", nil)
+
+	cookie := &http.Cookie{Name: "sessionID", Value: sessionID}
+	req.AddCookie(cookie)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	finalHandler.ServeHTTP(rec, req)
+
+	text, err := ioutil.ReadAll(rec.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(text) != "it_works" {
+		t.Error("No permission granted, when it should be.")
+	}
+}
+
+func TestCheckPermissionShouldNotBeGrantedBadUserType(t *testing.T) {
+	app := setUp()
+
+	sessionID := app.sessionManager.GetSessionID("test_data")
+	session, err := app.sessionManager.GetSession(sessionID)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	session.Data["user_type"] = "student"
+
+	finalHandler := app.checkPermission(http.HandlerFunc(testHandler), "teacher")
+
+	req, err := http.NewRequest("GET", "/main/teacher/", nil)
+
+	cookie := &http.Cookie{Name: "sessionID", Value: sessionID}
+	req.AddCookie(cookie)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	finalHandler.ServeHTTP(rec, req)
+
+	text, err := ioutil.ReadAll(rec.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(text) == "it_works" {
+		t.Error("Permission granted, when it should not be.")
+	}
+}
+
+func TestCheckPermissionShouldNotBeGrantedNoSession(t *testing.T) {
+	app := setUp()
+
+	finalHandler := app.checkPermission(http.HandlerFunc(testHandler), "teacher")
+
+	req, err := http.NewRequest("GET", "/main/teacher/", nil)
+
+	cookie := &http.Cookie{Name: "sessionID", Value: "random_session_id"}
+	req.AddCookie(cookie)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	finalHandler.ServeHTTP(rec, req)
+
+	text, err := ioutil.ReadAll(rec.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(text) == "it_works" {
+		t.Error("Permission granted, when it should not be.")
+	}
+}
+
+func TestCheckPermissionShouldNotBeGrantedNoCookie(t *testing.T) {
+	app := setUp()
+
+	finalHandler := app.checkPermission(http.HandlerFunc(testHandler), "teacher")
+
+	req, err := http.NewRequest("GET", "/main/teacher/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	finalHandler.ServeHTTP(rec, req)
+
+	text, err := ioutil.ReadAll(rec.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(text) == "it_works" {
+		t.Error("Permission granted, when it should not be.")
 	}
 }
 

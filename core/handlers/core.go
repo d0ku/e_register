@@ -18,10 +18,13 @@ import (
 	"github.com/d0ku/e_register/core/sessions"
 )
 
+//AppContext defines data that all handlers have access to.
 type AppContext struct {
-	sessionManager sessions.SessionManager
-	templates      map[string]*template.Template
-	DbHandler      databasehandling.DBHandler
+	sessionManager       sessions.SessionManager
+	templates            map[string]*template.Template
+	DbHandler            databasehandling.DBHandler
+	cookieLifeTime       time.Duration
+	loginTriesController *sessions.LoginTriesController
 }
 
 var (
@@ -86,7 +89,7 @@ func (app *AppContext) checkUserLogon(h http.Handler) http.Handler {
 
 		if err != nil {
 			log.Print("LOGIN|User from: " + r.RemoteAddr + " tried to access app page without privileges.")
-			app.templates["not_logged.gtpl"].Execute(w, nil)
+			err := app.templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -107,7 +110,7 @@ func (app *AppContext) checkPermission(h http.Handler, userTypeIn string) http.H
 		session, err := app.getSessionFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
-			app.templates["not_logged.gtpl"].Execute(w, nil)
+			err := app.templates["not_logged.gtpl"].Execute(w, nil)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
@@ -118,12 +121,13 @@ func (app *AppContext) checkPermission(h http.Handler, userTypeIn string) http.H
 		userType, ok := session.Data["user_type"]
 
 		if !ok || userType != userTypeIn {
-			app.templates["no_permission.gtpl"].Execute(w, userType)
+			err := app.templates["no_permission.gtpl"].Execute(w, userType)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 			return
 		}
+
 		h.ServeHTTP(w, r)
 	})
 
@@ -145,10 +149,10 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging
 	fileServer := http.StripPrefix("/page/", http.FileServer(http.Dir("./page/server_root/")))
 
 	//TODO: pass arguments in different way
-	appContext := &AppContext{sessionManager, templates, db}
+	appContext := &AppContext{sessionManager, templates, db, cookieLifeTime, loginController}
 
 	///main/{user_type}/{school_id}
-	mux.Handle("/login", appContext.loginHandlerDecorator(cookieLifeTime, loginController))
+	mux.Handle("/login", http.HandlerFunc(appContext.loginHandler))
 	mux.Handle("/logout", appContext.checkUserLogon(http.HandlerFunc(appContext.logoutHandler)))
 	mux.Handle("/main/", appContext.checkUserLogon(http.HandlerFunc(appContext.mainHandler)))
 	mux.Handle("/main/teacher/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleTeacher)), "teacher"))
