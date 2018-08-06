@@ -105,6 +105,7 @@ func (manager *SessionManagerStruct) GetSession(sessionID string) (*Session, err
 	//check if session is still valid.
 
 	if session.removeTime.Before(time.Now()) {
+		log.Print("Queried session is too old, deleting...")
 		delete(manager.sessionsToUsers, sessionID)
 		return nil, errors.New("Session is outdated and has to be deleted")
 	}
