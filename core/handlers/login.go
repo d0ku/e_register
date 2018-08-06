@@ -167,6 +167,8 @@ func (app *AppContext) loginHandler(w http.ResponseWriter, r *http.Request) {
 			//Send cookie with sessionID to Client.
 			http.SetCookie(w, cookie)
 
+			log.Print("Successfuly send cookie with sessionID to:" + username)
+
 			//Redirect user to main.
 			http.Redirect(w, r, "/main/", http.StatusSeeOther)
 		}

@@ -17,7 +17,7 @@ func setUp() *AppContext {
 	templates := parseAllTemplates("../../page/")
 
 	//Initialize session manager.
-	sessionManager := sessions.GetSessionManager(32, 150*time.Second)
+	sessionManager := sessions.GetSessionManager(32, time.Duration(150)*time.Second)
 
 	app := &AppContext{sessionManager, templates, nil, 150 * time.Second, sessions.GetLoginTriesController()}
 

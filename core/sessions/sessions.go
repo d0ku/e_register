@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+//TODO: race condition!
 //Old sessions are removed automatically only when there is a request for new session.
 //Of course session expiration time is validated when session is queried from manager.
 
@@ -89,6 +90,7 @@ func (manager *SessionManagerStruct) GetSessionID(username string) string {
 	}
 
 	manager.createSession(sessionID, username)
+	log.Print("New session created for:" + username)
 	return sessionID
 }
 
@@ -120,7 +122,7 @@ func (manager *SessionManagerStruct) createSession(sessionID string, username st
 func (manager *SessionManagerStruct) RemoveSession(sessionID string) {
 	session, err := manager.GetSession(sessionID)
 	if err != nil {
-
+		log.Print("Try to remove session which already does not exist.")
 	} else {
 		log.Print("Removed session of user:" + session.Data["user_name"])
 		delete(manager.sessionsToUsers, sessionID)
