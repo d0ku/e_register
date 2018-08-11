@@ -147,19 +147,8 @@ func (app *AppContext) loginHandler(w http.ResponseWriter, r *http.Request) {
 			log.Print("LOGIN|Logon as: " + username + " from:" + r.RemoteAddr)
 
 			//We always create new session for users who don't have valid cookies.
-			sessionID := app.sessionManager.GetSessionID(username)
-
-			//We add information about user type (basically as which the user has authenticated) to session.
-			//Also we add id information.
-			session, err := app.sessionManager.GetSession(sessionID)
-			if err != nil {
-				//There is literally no way for this to error out, but we check it anyway.
-				log.Print(err)
-			} else {
-				session.Data["user_type"] = userLoginTry.UserType
-				idStr := strconv.FormatInt(int64(user.Id), 10)
-				session.Data["id"] = idStr
-			}
+			idStr := strconv.FormatInt(int64(user.Id), 10)
+			sessionID := app.sessionManager.CreateSession(username, userLoginTry.UserType, idStr)
 
 			//Send cookie with defined expiration time and sessionID value to user.
 			cookie := &http.Cookie{Name: "sessionID", Value: sessionID, Expires: time.Now().Add(app.cookieLifeTime * time.Second), Secure: true, HttpOnly: false}

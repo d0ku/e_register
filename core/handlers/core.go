@@ -130,7 +130,6 @@ func (app *AppContext) checkPermission(h http.Handler, userTypeIn string) http.H
 
 		h.ServeHTTP(w, r)
 	})
-
 }
 
 //Initialize assigns handlers to provided mux and sets up sessionManager with provided session life time.

@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+var (
+	//ErrCouldNotGetValue is returned when session does not contain and can't get data with specified index.
+	ErrCouldNotGetValue = errors.New("Could not get queried value")
+)
+
 //TODO: race condition!
 //Old sessions are removed automatically only when there is a request for new session.
 //Of course session expiration time is validated when session is queried from manager.
@@ -24,6 +29,7 @@ type SessionManager interface {
 	GetSessionCount() int
 	GetSession(string) (*Session, error)
 	GetSessionID(string) string
+	CreateSession(string, string, string) string
 	RemoveSession(string)
 }
 
@@ -38,6 +44,38 @@ type SessionManagerStruct struct {
 type Session struct {
 	removeTime time.Time
 	Data       map[string]string
+}
+
+//GetData should be thought of as abstraction over default Go map.
+//If it does not contain value under specified index it tries to get it in some cases (look at code).
+//It data can't be returned even after these checks, error is returned.
+func (session *Session) GetData(index string) (string, error) {
+	val, ok := session.Data[index]
+	if !ok {
+		data, err := session.searchForData(index)
+		if err != nil {
+			return "", ErrCouldNotGetValue
+		}
+		val = data
+	}
+
+	return val, nil
+}
+
+func (session *Session) searchForData(index string) (string, error) {
+	//Value could not be found in session's Data map, we search for it elsewhere.
+	var result string
+	var err error
+	switch index {
+	case "username":
+		panic("Username should be in session map memory at the moment.")
+	case "user_type":
+		panic("User type should be in session map memory at the moment.")
+	case "id":
+		panic("User type should be in session map memory at the moment.")
+	}
+
+	return result, err
 }
 
 //GetSessionCount returns current amount of sessions.
@@ -65,8 +103,9 @@ func GetSessionManager(sessionIDLength int, lifePeriod time.Duration) SessionMan
 	return sessionManager
 }
 
-//GetSessionID returns unique sessionID for provided username.
-func (manager *SessionManagerStruct) GetSessionID(username string) string {
+func (manager *SessionManagerStruct) getUniqueSessionID() string {
+	//TODO: race condition can be solved on this function level, blocking in appropriate moment
+	var sessionID string
 	generateSessionID := func(length int) string {
 		bytes := make([]byte, length)
 
@@ -78,8 +117,6 @@ func (manager *SessionManagerStruct) GetSessionID(username string) string {
 
 		return base64.URLEncoding.EncodeToString(bytes)
 	}
-
-	var sessionID string
 	for {
 		//Try to generate unique session id until there is no session with such id. possible BUG: check for race condition
 		sessionID = generateSessionID(manager.SessionIDLength)
@@ -88,8 +125,32 @@ func (manager *SessionManagerStruct) GetSessionID(username string) string {
 			break
 		}
 	}
+	return sessionID
+}
 
-	manager.createSession(sessionID, username)
+//GetSessionID returns unique sessionID for provided username.
+//DEPRECATED
+func (manager *SessionManagerStruct) GetSessionID(username string) string {
+	sessionID := manager.getUniqueSessionID()
+
+	manager.removeOldSessions()
+	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.SessionLifePeriodSeconds), make(map[string]string)}
+	manager.sessionsToUsers[sessionID].Data["username"] = username
+
+	log.Print("New session created for:" + username)
+	return sessionID
+}
+
+//CreateSession returns sessionID of newly created session.
+func (manager *SessionManagerStruct) CreateSession(username string, userType string, userID string) string {
+	sessionID := manager.getUniqueSessionID()
+
+	manager.removeOldSessions()
+	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.SessionLifePeriodSeconds), make(map[string]string)}
+	manager.sessionsToUsers[sessionID].Data["user_type"] = userType
+	manager.sessionsToUsers[sessionID].Data["id"] = userID
+	manager.sessionsToUsers[sessionID].Data["username"] = username
+
 	log.Print("New session created for:" + username)
 	return sessionID
 }
@@ -111,12 +172,6 @@ func (manager *SessionManagerStruct) GetSession(sessionID string) (*Session, err
 	}
 
 	return session, nil
-}
-
-func (manager *SessionManagerStruct) createSession(sessionID string, username string) {
-	manager.removeOldSessions()
-	manager.sessionsToUsers[sessionID] = &Session{time.Now().Add(manager.SessionLifePeriodSeconds), make(map[string]string)}
-	manager.sessionsToUsers[sessionID].Data["username"] = username
 }
 
 //RemoveSession removes session based on the provided sessionID.
