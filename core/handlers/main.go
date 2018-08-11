@@ -106,8 +106,15 @@ func mainHandleStudent(w http.ResponseWriter, r *http.Request) {
 }
 
 //Gets called when client requests /main/teacher/{school_id}
-func mainHandleTeacher(w http.ResponseWriter, r *http.Request) {
+func (app *AppContext) mainHandleTeacher(w http.ResponseWriter, r *http.Request) {
+	userData, err := app.getUserDataFromRequest(w, r)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	schoolID := path.Base(r.RequestURI)
 	fmt.Println(schoolID)
-	w.Write([]byte("lol"))
+
+	app.templates["main_teacher.gtpl"].Execute(w, userData)
 }

@@ -174,7 +174,7 @@ func Initialize(templatesPath string, cookieLifeTime time.Duration, mux *logging
 	mux.Handle("/login", http.HandlerFunc(appContext.loginHandler))
 	mux.Handle("/logout", appContext.checkUserLogon(http.HandlerFunc(appContext.logoutHandler)))
 	mux.Handle("/main/", appContext.checkUserLogon(http.HandlerFunc(appContext.mainHandler)))
-	mux.Handle("/main/teacher/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleTeacher)), "teacher"))
+	mux.Handle("/main/teacher/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(appContext.mainHandleTeacher)), "teacher"))
 	mux.Handle("/main/student/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleStudent)), "student"))
 	mux.Handle("/main/schoolAdmin/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleSchoolAdmin)), "schoolAdmin"))
 	mux.Handle("/main/parent/", appContext.checkPermission(appContext.checkUserLogon(http.HandlerFunc(mainHandleParent)), "parent"))

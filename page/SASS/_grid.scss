@@ -1,0 +1,42 @@
+/* For mobile phones: */
+[class*="col-"] {
+    float: left;
+    width: 100%;
+    min-height: 1px;
+    margin: 0;
+}
+
+.row + .row {
+      margin-top: 0.5em;
+}
+
+.row::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+
+@media only screen and (min-width: 640px) {
+    /* For desktop: */
+    [class*='col-'] {
+        margin-right: 2%;
+    }
+    [class*='col-'] {
+        padding: 0em;
+    }
+    [class*='col-']:last-of-type {
+        margin-right: 0;
+    }
+    .col-1 {width: 6.5%;}
+    .col-2 {width: 15%;}
+    .col-3 {width: 23.5%;}
+    .col-4 {width: 32%;}
+    .col-5 {width: 40.5%;}
+    .col-6 {width: 49%;}
+    .col-7 {width: 57.5%;}
+    .col-8 {width: 66%;}
+    .col-9 {width: 74.5%;}
+    .col-10 {width: 83%;}
+    .col-11 {width: 91.5%;}
+    .col-12 {width: 100%;}
+}
