@@ -214,6 +214,7 @@ func TestCheckPermissionShouldBeGranted(t *testing.T) {
 	}
 
 	session.Data["user_type"] = "teacher"
+	session.Data["id"] = "not_important"
 
 	finalHandler := app.checkPermission(http.HandlerFunc(testHandler), "teacher")
 

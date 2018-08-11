@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path"
 	"strconv"
-	"strings"
 
 	"github.com/d0ku/e_register/core/databasehandling"
 )
@@ -107,8 +107,7 @@ func mainHandleStudent(w http.ResponseWriter, r *http.Request) {
 
 //Gets called when client requests /main/teacher/{school_id}
 func mainHandleTeacher(w http.ResponseWriter, r *http.Request) {
-	fields := strings.Split(r.RequestURI, "/")
-	schoolID := fields[len(fields)-1]
+	schoolID := path.Base(r.RequestURI)
 	fmt.Println(schoolID)
 	w.Write([]byte("lol"))
 }
