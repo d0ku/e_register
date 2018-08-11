@@ -56,11 +56,12 @@ func (handler *dbHandlerStruct) CheckUserLogin(username string, password string,
 	var exists bool
 	var userTypeOut string
 	var id int
-	err := handler.QueryRow(query).Scan(&exists, &userTypeOut, &id)
+	var change_password bool
+	err := handler.QueryRow(query).Scan(&exists, &userTypeOut, &id, &change_password)
 	if err != nil {
 		log.Print(err)
 	}
-	return &UserLoginData{exists, userTypeOut, id}
+	return &UserLoginData{exists, userTypeOut, id, change_password}
 }
 
 func (handler *dbHandlerStruct) CheckIfTeacherIsSchoolAdmin(teacherID int) int {

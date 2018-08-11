@@ -133,9 +133,9 @@ func (dbMock) CheckIfTeacherIsSchoolAdmin(id int) int {
 func (dbMock) CheckUserLogin(username string, password string, userType string) *databasehandling.UserLoginData {
 	if username == "test_teacher" && password == "teacher_password" && userType == "teacher" {
 
-		return &databasehandling.UserLoginData{true, "teacher", 1}
+		return &databasehandling.UserLoginData{true, "teacher", 1, false}
 	}
-	return &databasehandling.UserLoginData{false, "", 0}
+	return &databasehandling.UserLoginData{false, "", 0, false}
 }
 
 func (dbMock) GetSchoolsDetailsWhereTeacherTeaches(id string) ([]databasehandling.School, error) {
