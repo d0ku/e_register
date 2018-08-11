@@ -6,7 +6,6 @@ CREATE TYPE teacher_rank AS ENUM('inż.', 'mgr.', 'mgr. inż.', 'dr.'); -- TODO:
 CREATE TYPE sex_type AS ENUM('male', 'female');
 CREATE TYPE day_type AS ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
 CREATE TYPE presence_type AS ENUM('present', 'absent', 'late', 'justified');
-CREATE TYPE grade_type AS ENUM('1.0', '1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0', '5.5', '6.0');
 CREATE TYPE semester_type AS ENUM('winter', 'summer');
 CREATE TYPE behaviour_grades_type AS ENUM('1.0', '2.0', '3,0', '4.0', '5.0');
 CREATE TABLE Users (
@@ -112,8 +111,8 @@ CREATE TABLE Lessons (
 
 CREATE TABLE ClassesLessons (
     id_class integer references Classes(id_class),
-    id_subject integer references Subjects(id_subject),
-    PRIMARY KEY(id_class, id_subject)
+    id_lesson integer references Lessons(id_lesson),
+    PRIMARY KEY(id_class, id_lesson)
 );
 
 CREATE TABLE LessonsTeachers (
@@ -163,7 +162,7 @@ CREATE TABLE Warnings (
     id_student integer references Students(id_student),
     id_teacher integer references Teachers(id_teacher),
     content text NOT NULL,
-    day date
+    time timestamp NOT NULL
 );
 
 CREATE TABLE Grades (
@@ -171,7 +170,7 @@ CREATE TABLE Grades (
     id_student integer references Students(id_student),
     id_teacher integer references Teachers(id_teacher),
     id_subject integer references Subjects(id_subject),
-    grade grade_type NOT NULL
+    grade integer NOT NULL CHECK(grade >= 1 AND grade <= 6)
 );
 --Represents current semester.
 CREATE TABLE FinalGrades (
@@ -179,7 +178,7 @@ CREATE TABLE FinalGrades (
     id_student integer references Students(id_student),
     id_teacher integer references Teachers(id_teacher), --who added this grade.
     id_subject integer references Subjects(id_subject),
-    grade grade_type NOT NULL
+    grade integer NOT NULL CHECK (grade >= 1 AND grade <= 6)
 );
 
 --Stores information about all previous semesters.
@@ -190,7 +189,7 @@ id_grade SERIAL PRIMARY KEY,
     id_subject integer references Subjects(id_subject),
     id_class integer references Classes(id_class),
     id_semester integer references Semesters(id_semester),
-    grade grade_type NOT NULL
+    grade integer NOT NULL CHECK(grade >= 1 AND grade <= 6)
 );
 
 CREATE TABLE StudentsBehaviourGradesFinal (

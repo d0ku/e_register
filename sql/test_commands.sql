@@ -68,3 +68,18 @@ SELECT add_teacher_to_lesson(1,1); --should return f (duplicate)
 SELECT check_if_teacher_is_school_admin(1); --should return 1
 SELECT check_if_teacher_is_school_admin(2); --should return -1
 SELECT check_if_teacher_is_school_admin(0); --should return -1
+
+SELECT add_student_to_lesson(1, 1); --should return true (correct)
+SELECT add_student_to_lesson(1, 2); --should return true (correct)
+SELECT add_student_to_lesson(1, 10); --should return false (non-existing student)
+SELECT add_student_to_lesson(10, 1); --should return false (non-existing lesson)
+
+SELECT add_class_to_lesson(1, 10); --should return false (incorrect class_id)
+SELECT add_class_to_lesson(10, 1); --should return false (incorrect lesson_id)
+SELECT add_class_to_lesson(1, 1); --should return true (correct)
+SELECT add_class_to_lesson(1, 1); --should return false (duplicate)
+SELECT add_class_to_lesson(1, 2); --should return true (correct)
+
+SELECT add_warning(1,1,'very bad student!'); --should return true (correct)
+SELECT add_warning(1,12,'very bad student!'); --should return false (incorrect teacher_id)
+SELECT add_warning(12,1,'very bad student!'); --should return false (incorect student_id)

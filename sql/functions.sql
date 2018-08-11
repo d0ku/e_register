@@ -251,3 +251,38 @@ BEGIN
     WHERE id_teacher=teacher_id;
 END
 $$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_student_to_lesson(IN lesson_id integer, student_id integer) RETURNS BOOLEAN AS $$
+BEGIN
+    -- TODO: does it make sense to check whether lessons connected with user overlap each other?
+    INSERT INTO StudentsLessons("id_student", "id_lesson") VALUES (student_id, lesson_id);
+    RETURN TRUE;
+    EXCEPTION WHEN integrity_constraint_violation THEN
+        RETURN FALSE;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_class_to_lesson(IN lesson_id integer, class_id integer) RETURNS BOOLEAN AS $$
+BEGIN
+    -- TODO: does it make sense to check whether lessons connected with user overlap each other?
+    INSERT INTO ClassesLessons("id_class", "id_lesson") VALUES (class_id, lesson_id);
+    RETURN TRUE;
+    EXCEPTION WHEN integrity_constraint_violation THEN
+        RETURN FALSE;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_warning(IN user_id integer, teacher_id integer, content text) RETURNS BOOLEAN AS $$
+BEGIN
+    INSERT INTO Warnings("id_student", "id_teacher", "content", "time") VALUES(user_id, teacher_id, content, now());
+    RETURN TRUE;
+    EXCEPTION WHEN integrity_constraint_violation THEN
+        RETURN FALSE;
+END
+$$ language plpgsql;
+
+CREATE OR REPLACE FUNCTION add_final_grade(IN user_id integer, teacher_id integer, lesson_id integer, value integer) RETURNS BOOLEAN AS $$
+BEGIN
+
+END
+$$ language plpgsql;
