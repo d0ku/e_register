@@ -20,10 +20,11 @@
                         <li><a href="/main/teacher/{{ .UserID }}/timetable" >Plan lekcji</a></li>
                         <li><a href="/main/teacher/{{ .UserID }}/classes" >Lekcje</a></li>
                         <li><a href="/main/teacher/{{ .UserID }}/students" >Uczniowie</a></li>
+                        <li><a href="/logout" class="logout">Wyloguj</a></li>
                     </ul>
                 </nav>
                 <div id="description">
-                    Witamy na stronie głównej.
+                    Witamy na stronie głównej. Użyj przycisków umiejscowionych powyżej, aby przejść do odpowiednich funkcjonalności.
                 </div>
             </div>
         </div>
