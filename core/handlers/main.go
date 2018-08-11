@@ -14,112 +14,95 @@ import (
 
 func (app *AppContext) mainHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		session, err := app.getSessionFromRequest(w, r)
+		userData, err := app.getUserDataFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		schools, err := app.getDataToChoose(session.Data["user_type"], session.Data["id"])
-
-		if err != nil {
-			log.Print(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		switch userData.UserType {
+		case "teacher":
+			//display list of schools to choose from.
+			app.chooseSchool(w, r)
+		case "schoolAdmin":
+			//display list of schools to choose from.
+			app.chooseSchool(w, r)
+		case "student":
+			//redirect to /main/student/{student_id}
+			//TODO: is this correct http status?
+			http.Redirect(w, r, "/main/student/"+userData.UserID, http.StatusSeeOther)
+			break
+		case "parent":
+			//redirect to list of children
+			break
 		}
 
-		//No school/children to log into.
-		if len(schools) == 0 {
-			err := app.templates["no_school.gtpl"].Execute(w, nil)
-
-			if err != nil {
-				log.Print(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-		} else if len(schools) == 1 {
-			//Only one school or children, redirect to it instantly.e
-			http.Redirect(w, r, "/main/"+session.Data["user_type"]+"/"+strconv.FormatInt(int64(schools[0].Id), 10), http.StatusSeeOther)
-		} else {
-
-			//Many schools or children to choose from.
-
-			templateData := chooseSchoolTemplateParse{schools, session.Data["user_type"], session.Data["username"]}
-
-			err = app.templates["choose_school.gtpl"].Execute(w, templateData)
-
-			if err != nil {
-				log.Print(err)
-			}
-
-			/*
-				switch session.Data["user_type"] {
-
-				case "teacher":
-					mainHandleTeacher(w, r)
-				case "schoolAdmin":
-					mainHandleSchoolAdmin(w, r)
-				case "student":
-					mainHandleStudent(w, r)
-				case "parent":
-					mainHandleParent(w, r)
-
-				default:
-					//TODO: should such unknown user be automatically logged out and his cookie deleted?
-					log.Print("BUG|There was a try to log in as user of not specified type, this should not happen.")
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-				}
-			*/
-
-		}
+		return
 	}
-}
-
-//getDataToChoose returns appropriate data basing on provided userType and userID.
-//It errors out only when there was some error in databasehandling.
-//It returns empty array if no data is associated with user.
-func (app *AppContext) getDataToChoose(userType string, userID string) ([]databasehandling.School, error) {
-	//Return schools in case of teachers and admins, children in case of parents and class in case of student.
-	var schools []databasehandling.School
-	var err error
-
-	switch userType {
-	case "teacher":
-		schools, err = app.DbHandler.GetSchoolsDetailsWhereTeacherTeaches(userID)
-	case "schoolAdmin":
-
-	case "student":
-
-	case "parent":
-
-	}
-
-	return schools, err
-}
-
-//Gets called when client requests /main/schoolAdmin/{school_id}
-func mainHandleSchoolAdmin(w http.ResponseWriter, r *http.Request) {
-	log.Print("ADMIN")
-
-}
-
-//Gets called when client requests /main/parent/{student_id} where {student_id} is id of one of its child.
-func mainHandleParent(w http.ResponseWriter, r *http.Request) {
-	log.Print("PARENT")
-
-}
-
-//Gets called when client requests /main/parent/{student_id}
-func mainHandleStudent(w http.ResponseWriter, r *http.Request) {
-	log.Print("STUDENT")
-
 }
 
 type chooseSchoolTemplateParse struct {
 	Schools  []databasehandling.School
 	UserType string
 	UserName string
+}
+
+func (app *AppContext) chooseSchool(w http.ResponseWriter, r *http.Request) {
+	userData, err := app.getUserDataFromRequest(w, r)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	schools, err := app.DbHandler.GetSchoolsDetailsWhereTeacherTeaches(userData.UserID)
+
+	if err != nil {
+		log.Print(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	//No school to log into.
+	if len(schools) == 0 {
+		err := app.templates["no_school.gtpl"].Execute(w, nil)
+
+		if err != nil {
+			log.Print(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+	} else if len(schools) == 1 {
+		//Only one school, redirect to it instantly.e
+		http.Redirect(w, r, "/main/"+userData.UserType+"/"+strconv.FormatInt(int64(schools[0].Id), 10), http.StatusSeeOther)
+	} else {
+
+		//Many schools to choose from.
+
+		templateData := chooseSchoolTemplateParse{schools, userData.UserType, userData.Username}
+
+		err = app.templates["choose_school.gtpl"].Execute(w, templateData)
+
+		if err != nil {
+			log.Print(err)
+		}
+	}
+}
+
+//Gets called when client requests /main/schoolAdmin/{school_id}
+func mainHandleSchoolAdmin(w http.ResponseWriter, r *http.Request) {
+	log.Print("ADMIN")
+}
+
+//Gets called when client requests /main/parent/{student_id} where {student_id} is id of one of its child.
+func mainHandleParent(w http.ResponseWriter, r *http.Request) {
+	log.Print("PARENT")
+}
+
+//Gets called when client requests /main/parent/{student_id}
+func mainHandleStudent(w http.ResponseWriter, r *http.Request) {
+	log.Print("STUDENT")
 }
 
 //Gets called when client requests /main/teacher/{school_id}

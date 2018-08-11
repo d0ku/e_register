@@ -56,6 +56,28 @@ func (app *AppContext) getSessionFromRequest(w http.ResponseWriter, r *http.Requ
 	return session, nil
 }
 
+//Gets user data from request and automatically handles:
+//- no cookie at all
+//- incorrect cookie
+//and deletes cookie from client side in that case.
+func (app *AppContext) getUserDataFromRequest(w http.ResponseWriter, r *http.Request) (*sessions.UserData, error) {
+	cookie, err := r.Cookie("sessionID")
+	if err != nil {
+		return nil, ErrNoSuchSessionCookie
+	}
+
+	data, err := app.sessionManager.GetUserData(cookie.Value)
+
+	if err != nil {
+		//Delete cookie which is not recognized on server side.
+		cookie.Expires = time.Unix(0, 0)
+		http.SetCookie(w, cookie)
+		return nil, ErrNoSuchSession
+	}
+
+	return data, nil
+}
+
 func parseAllTemplates(pageFolder string) map[string]*template.Template {
 	templates := make(map[string]*template.Template)
 
@@ -107,7 +129,7 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 func (app *AppContext) checkPermission(h http.Handler, userTypeIn string) http.Handler {
 	//TODO: that checker is really simple, add more stuff.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := app.getSessionFromRequest(w, r)
+		userData, err := app.getUserDataFromRequest(w, r)
 		if err != nil {
 			log.Print(err)
 			err := app.templates["not_logged.gtpl"].Execute(w, nil)
@@ -118,10 +140,8 @@ func (app *AppContext) checkPermission(h http.Handler, userTypeIn string) http.H
 			return
 		}
 
-		userType, ok := session.Data["user_type"]
-
-		if !ok || userType != userTypeIn {
-			err := app.templates["no_permission.gtpl"].Execute(w, userType)
+		if userData.UserType != userTypeIn {
+			err := app.templates["no_permission.gtpl"].Execute(w, userTypeIn)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
