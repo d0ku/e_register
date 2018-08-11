@@ -24,6 +24,16 @@ type User struct {
 	privileges string
 }
 
+//UserData is struct type returned by manager's GetUserData function.
+type UserData struct {
+	Username  string
+	UserType  string
+	UserID    string
+	sessionID string
+	manager   SessionManager
+	data      map[string]string
+}
+
 //SessionManager is interface which defines capabilities of session manager.
 type SessionManager interface {
 	GetSessionCount() int
@@ -31,6 +41,7 @@ type SessionManager interface {
 	GetSessionID(string) string
 	CreateSession(string, string, string) string
 	RemoveSession(string)
+	GetUserData(string) (*UserData, error)
 }
 
 //SessionManagerStruct describes basic SessionManagerStruct for netApp.
@@ -49,10 +60,10 @@ type Session struct {
 //GetData should be thought of as abstraction over default Go map.
 //If it does not contain value under specified index it tries to get it in some cases (look at code).
 //It data can't be returned even after these checks, error is returned.
-func (session *Session) GetData(index string) (string, error) {
-	val, ok := session.Data[index]
+func (userData *UserData) GetData(index string) (string, error) {
+	val, ok := userData.data[index]
 	if !ok {
-		data, err := session.searchForData(index)
+		data, err := userData.searchForData(index)
 		if err != nil {
 			return "", ErrCouldNotGetValue
 		}
@@ -62,7 +73,7 @@ func (session *Session) GetData(index string) (string, error) {
 	return val, nil
 }
 
-func (session *Session) searchForData(index string) (string, error) {
+func (userData *UserData) searchForData(index string) (string, error) {
 	//Value could not be found in session's Data map, we search for it elsewhere.
 	var result string
 	var err error
@@ -81,6 +92,43 @@ func (session *Session) searchForData(index string) (string, error) {
 //GetSessionCount returns current amount of sessions.
 func (manager *SessionManagerStruct) GetSessionCount() int {
 	return len(manager.sessionsToUsers)
+}
+
+//GetUserData returns UserData structure or errors if session with suchID does not exists, or data is not complete enough to form a struct.
+//It just returns more convenient interface to operate on sessions.
+func (manager *SessionManagerStruct) GetUserData(sessionID string) (*UserData, error) {
+	session, err := manager.GetSession(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	userData := &UserData{}
+
+	username, ok := session.Data["username"]
+	if !ok {
+		return nil, errors.New("No username in session data")
+	}
+
+	userData.Username = username
+
+	id, ok := session.Data["id"]
+	if !ok {
+		return nil, errors.New("No id in session data")
+	}
+
+	userData.UserID = id
+
+	userType, ok := session.Data["user_type"]
+	if !ok {
+		return nil, errors.New("No user type in session data")
+	}
+
+	userData.UserType = userType
+
+	//These values can be useful in future.
+	userData.manager = manager
+	userData.sessionID = sessionID
+
+	return userData, nil
 }
 
 func (manager *SessionManagerStruct) removeOldSessions() {

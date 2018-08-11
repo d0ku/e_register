@@ -107,3 +107,26 @@ func TestGetSessionID(t *testing.T) {
 		}
 	}
 }
+
+func TestGetUserData(t *testing.T) {
+	setUpManager()
+
+	id := manager.CreateSession("username", "usertype", "userid")
+
+	data, err := manager.GetUserData(id)
+	if err != nil {
+		t.Error("Session exists, so there should be no error")
+	}
+
+	if data.Username != "username" {
+		t.Error("Bad username")
+	}
+
+	if data.UserType != "usertype" {
+		t.Error("Bad username")
+	}
+
+	if data.UserID != "userid" {
+		t.Error("Bad username")
+	}
+}
