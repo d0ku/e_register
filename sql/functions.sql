@@ -35,10 +35,10 @@ DECLARE
     login_try boolean;
     return_data login_data;
 BEGIN
+    --TODO: the complexity is comparable to going through a linked list, can it be lowered down?
     new_username = forename || '.' || surname ;
-    counter = 1;
-    --TODO: change this md5 to random, if someone knows how passwords are generated he can hijack new accounts at the moment.
-    password = md5(new_username);
+    counter = 0;
+    password = md5(random()::text);
 
     return_data.username = new_username;
     return_data.password = password;
@@ -49,6 +49,7 @@ BEGIN
     IF login_try THEN
         RETURN return_data;
     ELSE
+        counter = counter + 1;
         new_username = forename || '.' || surname || counter;
         return_data.username = new_username;
     END IF;

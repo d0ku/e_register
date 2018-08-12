@@ -102,3 +102,8 @@ SELECT add_teacher_to_subject(1,11); --should return false (no such subject)
 SELECT add_teacher_to_subject(11,1); --should return false (no such teacher)
 
 
+--TODO: what if data cannot be added to Users because it breaks integration? at the moment loop will never end
+SELECT add_new_user('Name','Surname','student',2); -- should return Name.Surname, random string
+SELECT add_new_user('Name','Surname','student',2); -- should return Name.Surname1, random string
+SELECT add_new_user('Name','Surname','student',2); -- should return Name.Surname2, random string
+
