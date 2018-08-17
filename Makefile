@@ -23,6 +23,7 @@ js:
 deps:
 	go get github.com/tdewolff/minify/cmd/minify
 	go get github.com/lib/pq
+	npm install -g sass
 
 clean:
 	-rm *~

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
 
 	//That's the recommended way to do it.
 	_ "github.com/lib/pq"
@@ -25,6 +24,7 @@ type DBHandler interface {
 
 type dbHandlerStruct struct {
 	*sql.DB
+	statements map[string]*sql.Stmt
 }
 
 //GetDatabaseHandler returns handler compliant with specified options.
@@ -45,19 +45,44 @@ func GetDatabaseHandler(username string, dbName string, dbPassword string, sslmo
 		return nil, err
 	}
 
-	handler := &dbHandlerStruct{dbConnection}
+	statements := getStatements(dbConnection)
+	handler := &dbHandlerStruct{dbConnection, statements}
 
 	return DBHandler(handler), nil
 }
 
+//TODO: Is this really worth it?
+func getStatements(dbConn *sql.DB) map[string]*sql.Stmt {
+	statements := make(map[string]*sql.Stmt)
+
+	temp, err := dbConn.Prepare("SELECT * FROM check_login_data($1,$2,$3);")
+	if err != nil {
+		panic(err)
+	}
+	statements["login"] = temp
+
+	temp, err = dbConn.Prepare("SELECT * FROM check_if_teacher_is_school_admin($1);")
+	if err != nil {
+		panic(err)
+	}
+	statements["check_school_admin"] = temp
+
+	temp, err = dbConn.Prepare("SELECT * FROM get_schools_details_where_teacher_teaches($1);")
+	if err != nil {
+		panic(err)
+	}
+	statements["check_schools_details"] = temp
+
+	return statements
+}
+
 func (handler *dbHandlerStruct) CheckUserLogin(username string, password string, userType string) *UserLoginData {
-	query := "SELECT * FROM check_login_data('" + username + "','" + password + "','" + userType + "');"
-	fmt.Println(query)
 	var exists bool
 	var userTypeOut string
 	var id int
 	var change_password bool
-	err := handler.QueryRow(query).Scan(&exists, &userTypeOut, &id, &change_password)
+	//err = handler.QueryRow(query).Scan(&exists, &userTypeOut, &id, &change_password)
+	err := handler.statements["login"].QueryRow(username, password, userType).Scan(&exists, &userTypeOut, &id, &change_password)
 	if err != nil {
 		log.Print(err)
 	}
@@ -65,11 +90,8 @@ func (handler *dbHandlerStruct) CheckUserLogin(username string, password string,
 }
 
 func (handler *dbHandlerStruct) CheckIfTeacherIsSchoolAdmin(teacherID int) int {
-	fmt.Println(teacherID)
-	query := "SELECT * FROM check_if_teacher_is_school_admin(" + strconv.Itoa(teacherID) + ");"
-	fmt.Println(query)
 	var output = -1
-	err := handler.QueryRow(query).Scan(&output)
+	err := handler.statements["check_school_admin"].QueryRow(teacherID).Scan(&output)
 
 	if err != nil {
 		log.Print(err)
@@ -81,10 +103,7 @@ func (handler *dbHandlerStruct) CheckIfTeacherIsSchoolAdmin(teacherID int) int {
 func (handler *dbHandlerStruct) GetSchoolsDetailsWhereTeacherTeaches(teacherID string) ([]School, error) {
 	//We are not returning pointers, because Go templates could not handle them at the moment.
 
-	query := "SELECT * FROM get_schools_details_where_teacher_teaches(" + teacherID + ");"
-	fmt.Println(query)
-
-	rows, err := handler.Query(query)
+	rows, err := handler.statements["check_schools_details"].Query(teacherID)
 	if err != nil {
 		log.Print(err)
 		return nil, ErrCouldNotGetRows
