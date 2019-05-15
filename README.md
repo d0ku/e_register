@@ -2,6 +2,10 @@
 
 [![Build Status](https://travis-ci.com/d0ku/e_register.svg?token=czCs7ySFgsJtHB5vZwPp&branch=master)](https://travis-ci.com/d0ku/e_register)
 
+## Disclaimer
+
+That's first web app I have ever written, and I really believed it will be much less work than it happened to be. That version has base for sessions, login and stuff like that implemented, it has no real use at the moment.
+
 ## Important
 
 By default Makefile configures PostgreSQL to be run on local machine, not on remote server. If that's not the case for you, it has to be changed.
