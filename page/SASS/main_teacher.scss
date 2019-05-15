@@ -1,0 +1,29 @@
+@import 'base';
+@import 'grid';
+
+li {
+    display: inline;
+
+}
+
+nav ul {
+    padding: 10px;
+    background-color:#333;
+}
+
+nav li a:hover {
+    background-color: #111;
+}
+
+.logout {
+    float:right;
+}
+
+nav a {
+    font-size: 1.5em;
+    color: white;
+    display: inline-box;
+    padding: 5px;
+    margin: 5px;
+    font-family: $button_font;
+}

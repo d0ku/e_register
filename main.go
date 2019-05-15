@@ -4,16 +4,18 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/d0ku/e_register/core/databasehandling"
 	"github.com/d0ku/e_register/core/handlers"
+	"github.com/d0ku/e_register/core/logging"
 	"github.com/d0ku/e_register/core/server"
 )
 
-func setUpDatabaseConnection(config map[string]string) {
+func setUpDatabaseConnection(config map[string]string) databasehandling.DBHandler {
 	//TODO: maybe just provide connection string from here?
 	//Create dbHandler object.
 	temp, err := databasehandling.GetDatabaseHandler(config["db_username"], config["db_name"], config["db_password"], config["db_sslmode"])
@@ -23,20 +25,20 @@ func setUpDatabaseConnection(config map[string]string) {
 
 	//If no errors were thrown, assign this object as global database handler.
 
-	databasehandling.DbHandler = temp
+	return temp
 }
 
-func setUpHTTPHandlers(config map[string]string) {
+func setUpHTTPHandlers(config map[string]string, db databasehandling.DBHandler, mux *logging.MuxController) {
 	temp, err := strconv.Atoi(config["cookie_life_time"])
 	if err != nil {
 		log.Panic("Could not parse cookie_life_time value.")
 	}
 
 	cookieLifeTime := time.Duration(temp) * time.Second
-	handlers.Initialize(config["web_assets_path"], cookieLifeTime, server.MainServerMux)
+	handlers.Initialize(config["web_assets_path"], cookieLifeTime, mux, db)
 }
 
-func setUpAndRunServer(config map[string]string) {
+func setUpAndRunServer(config map[string]string, mux *logging.MuxController) {
 	val := config["redirect_http_to_https"]
 
 	var redirect bool
@@ -56,7 +58,7 @@ func setUpAndRunServer(config map[string]string) {
 		}()
 	}
 
-	mainServer := server.GetTLSServer(config["https_port"])
+	mainServer := server.GetTLSServer(config["https_port"], mux)
 
 	log.Print()
 	if config["https_port"] == "443" {
@@ -107,7 +109,9 @@ func main() {
 
 	parseConfigFile(configPath, config)
 
-	setUpDatabaseConnection(config)
-	setUpHTTPHandlers(config)
-	setUpAndRunServer(config)
+	mux := logging.GetMux(http.NewServeMux())
+
+	db := setUpDatabaseConnection(config)
+	setUpHTTPHandlers(config, db, mux)
+	setUpAndRunServer(config, mux)
 }

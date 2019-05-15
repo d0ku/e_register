@@ -8,10 +8,11 @@ import (
 	"github.com/d0ku/e_register/core/sessions"
 )
 
-var manager *sessions.SessionManager
+var manager *sessions.SessionManagerStruct
 
 func setUpManager() {
-	manager = sessions.GetSessionManager(8, 15*time.Minute)
+	managerTemp := sessions.GetSessionManager(8, 15*time.Minute)
+	manager = managerTemp.(*sessions.SessionManagerStruct)
 }
 
 func TestCreateSessionManager(t *testing.T) {
@@ -88,7 +89,8 @@ func CheckIfSessionWillBeDeletedAfterTimeNotCalledSession(t *testing.T) {
 func TestGetSessionID(t *testing.T) {
 
 	//TODO: this test does not make much sense at the moment.
-	manager = sessions.GetSessionManager(1, 15*time.Minute)
+	managerTemp := sessions.GetSessionManager(8, 15*time.Minute)
+	manager = managerTemp.(*sessions.SessionManagerStruct)
 
 	temp := make([]string, 4)
 
@@ -103,5 +105,28 @@ func TestGetSessionID(t *testing.T) {
 				t.Fatalf("Sessions IDs must be unique and they are not.")
 			}
 		}
+	}
+}
+
+func TestGetUserData(t *testing.T) {
+	setUpManager()
+
+	id := manager.CreateSession("username", "usertype", "userid")
+
+	data, err := manager.GetUserData(id)
+	if err != nil {
+		t.Error("Session exists, so there should be no error")
+	}
+
+	if data.Username != "username" {
+		t.Error("Bad username")
+	}
+
+	if data.UserType != "usertype" {
+		t.Error("Bad username")
+	}
+
+	if data.UserID != "userid" {
+		t.Error("Bad username")
 	}
 }

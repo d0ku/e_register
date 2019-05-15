@@ -19,7 +19,7 @@ psql -c 'CREATE DATABASE '"$1"';' -U postgres
 # Run all configuration files on previously created database.
 psql -d $1 -f ./extensions.sql -U postgres
 psql -d $1 -f ./create_tables.sql -U postgres
-psql -d $1 -f ./procedures.sql -U postgres
+psql -d $1 -f ./functions.sql -U postgres
 
 if [ "$2" != "" ]
 then

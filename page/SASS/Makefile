@@ -5,6 +5,7 @@ sass_files:
 	sass not_logged.scss ../server_root/CSS/not_logged.css --style compressed
 	sass login_form.scss ../server_root/CSS/login_form.css --style compressed
 	sass choose_school.scss ../server_root/CSS/choose_school.css --style compressed
+	sass main_teacher.scss ../server_root/CSS/main_teacher.css --style compressed
 	- cd ../server_root/CSS/ && rm -rf *.css.map
 
 clean:
